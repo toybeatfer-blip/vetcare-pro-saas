@@ -101,7 +101,7 @@ Genera mensajes empáticos, claros y profesionales para WhatsApp, SMS o correo e
     console.log("No dist folder found, dynamically launching Vite middleware...");
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, allowedHosts: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
