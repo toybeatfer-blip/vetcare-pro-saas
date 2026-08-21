@@ -1,0 +1,4 @@
+[AutoRun]
+open=Iniciar_VeterinariaYELLOW_x64.bat
+label=VeterinariaYELLOW Portable USB
+action=Iniciar Sistema Clinico VeterinariaYELLOW

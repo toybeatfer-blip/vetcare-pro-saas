@@ -86,21 +86,63 @@ Genera mensajes empáticos, claros y profesionales para WhatsApp, SMS o correo e
     }
   });
 
-  // Serve static files in production or fallback to Vite dev server
-  const distPath = fs.existsSync(path.resolve(process.cwd(), "dist"))
-    ? path.resolve(process.cwd(), "dist")
-    : path.resolve(__dirname, "dist");
+  // Smart resolver to find the compiled dist folder anywhere in the repository
+  function findDistPath() {
+    const candidates = [
+      path.resolve(process.cwd(), "dist"),
+      path.resolve(__dirname, "dist"),
+      path.resolve(process.cwd(), "PROYECTO YABET", "dist"),
+      path.resolve(process.cwd(), "Remix-VetCare-Pro---Control-Veterinario-y-Portal-de-Clientes-2026-08-15-bddcb", "dist"),
+    ];
 
-  if (fs.existsSync(distPath) && fs.existsSync(path.join(distPath, "index.html"))) {
+    for (const cand of candidates) {
+      if (fs.existsSync(cand) && fs.existsSync(path.join(cand, "index.html"))) {
+        return cand;
+      }
+    }
+
+    try {
+      const items = fs.readdirSync(process.cwd());
+      for (const item of items) {
+        const sub = path.resolve(process.cwd(), item, "dist");
+        if (fs.existsSync(sub) && fs.existsSync(path.join(sub, "index.html"))) {
+          return sub;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    return null;
+  }
+
+  const distPath = findDistPath();
+
+  if (distPath) {
     console.log(`Serving static production files from: ${distPath}`);
     app.use(express.static(distPath));
     app.get("*", (_req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   } else {
-    console.log("No dist folder found, dynamically launching Vite middleware...");
+    console.log("No compiled dist folder found, searching root for dynamic Vite...");
+    
+    let appRoot = process.cwd();
+    const possibleRoots = [
+      process.cwd(),
+      __dirname,
+      path.resolve(process.cwd(), "PROYECTO YABET"),
+      path.resolve(process.cwd(), "Remix-VetCare-Pro---Control-Veterinario-y-Portal-de-Clientes-2026-08-15-bddcb"),
+    ];
+    for (const r of possibleRoots) {
+      if (fs.existsSync(path.join(r, "src", "main.tsx")) || fs.existsSync(path.join(r, "index.html"))) {
+        appRoot = r;
+        break;
+      }
+    }
+
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
+      root: appRoot,
       server: { middlewareMode: true, allowedHosts: true },
       appType: "spa",
     });
