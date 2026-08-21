@@ -1,40 +1,25 @@
-# Production Dockerfile for VetCare Pro SaaS (Debian Slim for maximum compatibility with esbuild and Node.js)
-FROM node:20-slim AS builder
+# Production Dockerfile for VetCare Pro SaaS
+FROM node:20-slim
 
 WORKDIR /app
 
-# Ensure build tools are installed during compile stage
-ENV NODE_ENV=development
-
-# Copy package manifests
+# Copy package configuration
 COPY package*.json ./
 
-# Install all build dependencies
+# Install dependencies
 RUN npm install
 
 # Copy application source files
 COPY . .
 
-# Build frontend and compile Node server
+# Build client bundle
 RUN npm run build
 
-# Production runtime stage
-FROM node:20-slim AS runner
-
-WORKDIR /app
-
+# Set environment
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Copy package manifests and install production dependencies
-COPY package*.json ./
-RUN npm install --omit=dev
-
-# Copy compiled artifacts from builder stage
-COPY --from=builder /app/dist ./dist
-
-# Expose server port
 EXPOSE 3000
 
-# Launch server
-CMD ["node", "dist/server.cjs"]
+# Start application server
+CMD ["node", "server.js"]
