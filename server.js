@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
@@ -85,20 +86,25 @@ Genera mensajes empáticos, claros y profesionales para WhatsApp, SMS o correo e
     }
   });
 
-  // Serve static files in production or run Vite in dev
-  if (process.env.NODE_ENV !== "production") {
+  // Serve static files in production or fallback to Vite dev server
+  const distPath = fs.existsSync(path.resolve(process.cwd(), "dist"))
+    ? path.resolve(process.cwd(), "dist")
+    : path.resolve(__dirname, "dist");
+
+  if (fs.existsSync(distPath) && fs.existsSync(path.join(distPath, "index.html"))) {
+    console.log(`Serving static production files from: ${distPath}`);
+    app.use(express.static(distPath));
+    app.get("*", (_req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+  } else {
+    console.log("No dist folder found, dynamically launching Vite middleware...");
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(__dirname, "dist");
-    app.use(express.static(distPath));
-    app.get("*", (_req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
   }
 
   app.listen(PORT, "0.0.0.0", () => {
