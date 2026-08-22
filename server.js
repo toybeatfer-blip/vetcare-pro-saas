@@ -53,9 +53,99 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Multi-tenant database storage directory
+  const DATA_DIR = path.resolve(process.cwd(), "data");
+  const CLINICS_DIR = path.join(DATA_DIR, "clinics");
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (!fs.existsSync(CLINICS_DIR)) fs.mkdirSync(CLINICS_DIR, { recursive: true });
+
+  const TENANTS_FILE = path.join(DATA_DIR, "tenants.json");
+  const PAYMENTS_FILE = path.join(DATA_DIR, "payments.json");
+
+  // Helper to read/write JSON safely
+  const readJson = (filePath, fallback = null) => {
+    try {
+      if (fs.existsSync(filePath)) {
+        return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+      }
+    } catch (e) {
+      console.error(`Error reading ${filePath}:`, e);
+    }
+    return fallback;
+  };
+
+  const writeJson = (filePath, data) => {
+    try {
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+      return true;
+    } catch (e) {
+      console.error(`Error writing ${filePath}:`, e);
+      return false;
+    }
+  };
+
   // Health check endpoint
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // 1. Multi-Tenant List & Auto-Poll API
+  app.get("/api/tenants", (_req, res) => {
+    const tenants = readJson(TENANTS_FILE, null);
+    res.json({ success: true, tenants });
+  });
+
+  app.post("/api/tenants/sync-all", (req, res) => {
+    const { tenants } = req.body;
+    if (Array.isArray(tenants)) {
+      writeJson(TENANTS_FILE, tenants);
+      return res.json({ success: true, count: tenants.length, timestamp: new Date().toISOString() });
+    }
+    res.status(400).json({ success: false, error: "Invalid tenants payload" });
+  });
+
+  // 2. Payment Renewal Requests API
+  app.get("/api/payment-requests", (_req, res) => {
+    const requests = readJson(PAYMENTS_FILE, []);
+    res.json({ success: true, requests });
+  });
+
+  app.post("/api/payment-requests/sync-all", (req, res) => {
+    const { requests } = req.body;
+    if (Array.isArray(requests)) {
+      writeJson(PAYMENTS_FILE, requests);
+      return res.json({ success: true, count: requests.length, timestamp: new Date().toISOString() });
+    }
+    res.status(400).json({ success: false, error: "Invalid requests payload" });
+  });
+
+  // 3. Isolated Clinic Database Partition API
+  app.get("/api/clinics/:clinicId/data", (req, res) => {
+    const clinicId = (req.params.clinicId || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    const clinicFile = path.join(CLINICS_DIR, `${clinicId}.json`);
+    const data = readJson(clinicFile, null);
+    res.json({ success: true, clinicId, data });
+  });
+
+  app.post("/api/clinics/:clinicId/data", (req, res) => {
+    const clinicId = (req.params.clinicId || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    const clinicFile = path.join(CLINICS_DIR, `${clinicId}.json`);
+    const { data } = req.body;
+    if (data) {
+      writeJson(clinicFile, data);
+      return res.json({ success: true, clinicId, message: "Base de datos de clínica guardada de forma aislada", timestamp: new Date().toISOString() });
+    }
+    res.status(400).json({ success: false, error: "Invalid clinic data payload" });
+  });
+
+  // 4. Delete Isolated Clinic Database
+  app.delete("/api/clinics/:clinicId", (req, res) => {
+    const clinicId = (req.params.clinicId || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    const clinicFile = path.join(CLINICS_DIR, `${clinicId}.json`);
+    if (fs.existsSync(clinicFile)) {
+      fs.unlinkSync(clinicFile);
+    }
+    res.json({ success: true, message: `Partición de base de datos de ${clinicId} eliminada` });
   });
 
   // Gemini Veterinary Assistant API
