@@ -336,8 +336,8 @@ const MainAppContent: React.FC = () => {
         onClose={() => setIsLicenseModalOpen(false)}
       />
 
-      {/* Full Blocking Screen for Monthly / Annual Rental License Lock */}
-      <LicenseLockModal isOpen={isLicenseLocked} />
+      {/* Full Blocking Screen for Monthly / Annual Rental License Lock (Only for authenticated clinic users) */}
+      <LicenseLockModal isOpen={isLicenseLocked && !!currentUser && currentUser.role !== 'superuser'} />
 
       {/* Full Blocking Screen for Offline Enforcement */}
       <OfflineBarrierModal
