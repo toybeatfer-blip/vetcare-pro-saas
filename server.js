@@ -163,6 +163,59 @@ async function startServer() {
     res.status(400).json({ success: false, error: "Invalid clinic data payload" });
   });
 
+  // 4. Session Persistence & Audit API on User Logout
+  const SESSION_AUDIT_FILE = path.join(DATA_DIR, "session_audit.json");
+  const GLOBAL_BACKUP_FILE = path.join(DATA_DIR, "global_session_backup.json");
+
+  app.post("/api/session/save-on-logout", (req, res) => {
+    try {
+      const { sessionData, userAudit } = req.body;
+      const now = new Date().toISOString();
+
+      if (sessionData) {
+        // Save global snapshot
+        writeJson(GLOBAL_BACKUP_FILE, {
+          savedAt: now,
+          userAudit: userAudit || null,
+          data: sessionData,
+        });
+
+        // If clinicId is provided, write to clinic-specific file
+        const clinicId = userAudit?.tenantId || sessionData?.clinicSettings?.name?.toLowerCase()?.replace(/[^a-z0-9]/g, "");
+        if (clinicId) {
+          const clinicFile = path.join(CLINICS_DIR, `${clinicId}.json`);
+          writeJson(clinicFile, sessionData);
+        }
+      }
+
+      // Record audit history
+      if (userAudit) {
+        const auditRecord = {
+          ...userAudit,
+          serverTimestamp: now,
+        };
+        const existingAudits = readJson(SESSION_AUDIT_FILE, []);
+        const auditList = Array.isArray(existingAudits) ? existingAudits : [];
+        writeJson(SESSION_AUDIT_FILE, [auditRecord, ...auditList.slice(0, 49)]);
+      }
+
+      return res.json({
+        success: true,
+        savedAt: now,
+        message: "Todos los cambios generados durante la sesión se han guardado con éxito en la base de datos",
+      });
+    } catch (err) {
+      console.error("Error in /api/session/save-on-logout:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get("/api/session/last-audit", (_req, res) => {
+    const audits = readJson(SESSION_AUDIT_FILE, []);
+    const last = Array.isArray(audits) && audits.length > 0 ? audits[0] : null;
+    res.json({ success: true, lastAudit: last });
+  });
+
   // 4. Delete Tenant and its Isolated Database
   app.delete("/api/tenants/:tenantId", (req, res) => {
     const tenantId = (req.params.tenantId || "").replace(/[^a-zA-Z0-9_-]/g, "");
