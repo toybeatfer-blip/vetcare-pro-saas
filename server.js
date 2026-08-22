@@ -163,7 +163,25 @@ async function startServer() {
     res.status(400).json({ success: false, error: "Invalid clinic data payload" });
   });
 
-  // 4. Delete Isolated Clinic Database
+  // 4. Delete Tenant and its Isolated Database
+  app.delete("/api/tenants/:tenantId", (req, res) => {
+    const tenantId = (req.params.tenantId || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    
+    // Remove from tenants.json
+    const existing = readJson(TENANTS_FILE, []);
+    const currentList = Array.isArray(existing) ? existing : [];
+    const updated = currentList.filter(t => t.id !== tenantId);
+    writeJson(TENANTS_FILE, updated);
+
+    // Remove isolated clinic db file
+    const clinicFile = path.join(CLINICS_DIR, `${tenantId}.json`);
+    if (fs.existsSync(clinicFile)) {
+      fs.unlinkSync(clinicFile);
+    }
+
+    res.json({ success: true, message: `Clínica ${tenantId} y su base de datos aislada eliminadas definitivamente`, remainingCount: updated.length });
+  });
+
   app.delete("/api/clinics/:clinicId", (req, res) => {
     const clinicId = (req.params.clinicId || "").replace(/[^a-zA-Z0-9_-]/g, "");
     const clinicFile = path.join(CLINICS_DIR, `${clinicId}.json`);
@@ -171,6 +189,32 @@ async function startServer() {
       fs.unlinkSync(clinicFile);
     }
     res.json({ success: true, message: `Partición de base de datos de ${clinicId} eliminada` });
+  });
+
+  // 5. SuperUser Settings & Master Credentials API
+  const SUPERUSER_FILE = path.join(DATA_DIR, "superuser.json");
+  app.get("/api/superuser/settings", (_req, res) => {
+    const settings = readJson(SUPERUSER_FILE, {
+      username: "creator",
+      name: "Creador del Sistema",
+      isSuperUser: true,
+      masterBillingCard: {
+        bankName: "BBVA México",
+        beneficiaryName: "VetCare Pro SaaS",
+        accountOrCardNumber: "4152 3138 9012 3456",
+        clabe: "012180001234567890"
+      }
+    });
+    res.json({ success: true, settings });
+  });
+
+  app.post("/api/superuser/settings", (req, res) => {
+    const { settings } = req.body;
+    if (settings) {
+      writeJson(SUPERUSER_FILE, settings);
+      return res.json({ success: true, settings, timestamp: new Date().toISOString() });
+    }
+    res.status(400).json({ success: false, error: "Invalid superuser settings" });
   });
 
   // Gemini Veterinary Assistant API

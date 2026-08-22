@@ -1,7 +1,7 @@
 {
-  "name": "veterinariaYELLOW - App para Tutores",
-  "short_name": "veterinariaYELLOW",
-  "description": "App Android para tutores de mascotas: carnet de vacunación digital, citas, tratamientos y asistencia veterinaria 24/7.",
+  "name": "VetCare Pro - Software Veterinario & Portal de Clientes",
+  "short_name": "VetCare Pro",
+  "description": "Software integral para gestión clínica veterinaria y App para tutores de mascotas con carnet digital de vacunación, citas y asistencia 24/7.",
   "start_url": "/?view=android",
   "display": "standalone",
   "background_color": "#0f172a",
