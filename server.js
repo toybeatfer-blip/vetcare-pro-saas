@@ -152,14 +152,10 @@ Genera mensajes empáticos, claros y profesionales para WhatsApp, SMS o correo e
       }
     }
 
-    // 3. Dynamic Vite fallback: locate src/main.tsx anywhere recursively
-    const mainTsxPath = findFileOrDirRecursively(process.cwd(), "main.tsx");
-    let appRoot = process.cwd();
-    if (mainTsxPath) {
-      const srcDir = path.dirname(mainTsxPath);
-      appRoot = path.dirname(srcDir);
-      console.log(`Found main.tsx at: ${mainTsxPath}, using root: ${appRoot}`);
-    }
+    // 3. Dynamic Vite fallback: locate index.html and main.tsx anywhere recursively
+    const indexHtmlPath = findFileOrDirRecursively(process.cwd(), "index.html");
+    let appRoot = indexHtmlPath ? path.dirname(indexHtmlPath) : process.cwd();
+    console.log(`Dynamic Vite using appRoot: ${appRoot}`);
 
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
@@ -168,6 +164,22 @@ Genera mensajes empáticos, claros y profesionales para WhatsApp, SMS o correo e
       appType: "spa",
     });
     app.use(vite.middlewares);
+
+    app.get("*", async (req, res, next) => {
+      try {
+        const url = req.originalUrl;
+        const htmlFile = path.join(appRoot, "index.html");
+        if (fs.existsSync(htmlFile)) {
+          let template = fs.readFileSync(htmlFile, "utf-8");
+          template = await vite.transformIndexHtml(url, template);
+          res.status(200).set({ "Content-Type": "text/html" }).end(template);
+        } else {
+          res.status(404).send("index.html not found");
+        }
+      } catch (e) {
+        next(e);
+      }
+    });
   }
 
   app.listen(PORT, "0.0.0.0", () => {
