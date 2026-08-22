@@ -104,6 +104,18 @@ async function startServer() {
     res.status(400).json({ success: false, error: "Invalid tenants payload" });
   });
 
+  app.post("/api/tenants/register", (req, res) => {
+    const { tenant } = req.body;
+    if (tenant && tenant.id) {
+      const existing = readJson(TENANTS_FILE, []);
+      const currentList = Array.isArray(existing) ? existing : [];
+      const updated = [tenant, ...currentList.filter(t => t.id !== tenant.id)];
+      writeJson(TENANTS_FILE, updated);
+      return res.json({ success: true, tenant, count: updated.length, timestamp: new Date().toISOString() });
+    }
+    res.status(400).json({ success: false, error: "Invalid tenant registration payload" });
+  });
+
   // 2. Payment Renewal Requests API
   app.get("/api/payment-requests", (_req, res) => {
     const requests = readJson(PAYMENTS_FILE, []);
@@ -119,6 +131,18 @@ async function startServer() {
     res.status(400).json({ success: false, error: "Invalid requests payload" });
   });
 
+  app.post("/api/payment-requests/create", (req, res) => {
+    const { request } = req.body;
+    if (request && request.id) {
+      const existing = readJson(PAYMENTS_FILE, []);
+      const currentList = Array.isArray(existing) ? existing : [];
+      const updated = [request, ...currentList.filter(r => r.id !== request.id)];
+      writeJson(PAYMENTS_FILE, updated);
+      return res.json({ success: true, request, count: updated.length, timestamp: new Date().toISOString() });
+    }
+    res.status(400).json({ success: false, error: "Invalid payment request payload" });
+  });
+
   // 3. Isolated Clinic Database Partition API
   app.get("/api/clinics/:clinicId/data", (req, res) => {
     const clinicId = (req.params.clinicId || "").replace(/[^a-zA-Z0-9_-]/g, "");
@@ -130,9 +154,10 @@ async function startServer() {
   app.post("/api/clinics/:clinicId/data", (req, res) => {
     const clinicId = (req.params.clinicId || "").replace(/[^a-zA-Z0-9_-]/g, "");
     const clinicFile = path.join(CLINICS_DIR, `${clinicId}.json`);
-    const { data } = req.body;
-    if (data) {
-      writeJson(clinicFile, data);
+    const payload = req.body.data || req.body.clinicData || req.body;
+    if (payload && (payload.pets || payload.clinicSettings || req.body.data || req.body.clinicData)) {
+      const dataToSave = req.body.data || req.body.clinicData || payload;
+      writeJson(clinicFile, dataToSave);
       return res.json({ success: true, clinicId, message: "Base de datos de clínica guardada de forma aislada", timestamp: new Date().toISOString() });
     }
     res.status(400).json({ success: false, error: "Invalid clinic data payload" });
