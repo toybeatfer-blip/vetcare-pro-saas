@@ -125,6 +125,29 @@ Genera mensajes empáticos, claros y profesionales para WhatsApp, SMS o correo e
     }
   }
 
+  // Fallback: If /assets/file is requested but file is in root directory
+  app.get("/assets/:file", (req, res, next) => {
+    const filename = req.params.file;
+    const candidates = [
+      path.resolve(process.cwd(), filename),
+      path.resolve(process.cwd(), "assets", filename),
+      path.resolve(process.cwd(), "dist", "assets", filename),
+      path.resolve(process.cwd(), "public", "assets", filename),
+      path.resolve(__dirname, filename),
+    ];
+    for (const c of candidates) {
+      if (fs.existsSync(c)) {
+        if (filename.endsWith(".js")) res.setHeader("Content-Type", "application/javascript");
+        if (filename.endsWith(".css")) res.setHeader("Content-Type", "text/css");
+        return res.sendFile(c);
+      }
+    }
+    next();
+  });
+
+  // Direct root asset handler for .js and .css files
+  app.use(express.static(process.cwd()));
+
   // 1. Check if a compiled dist folder exists anywhere in the workspace
   const distDir = findFileOrDirRecursively(process.cwd(), "dist");
   if (distDir && fs.existsSync(path.join(distDir, "index.html"))) {
