@@ -119,6 +119,7 @@ Genera mensajes empáticos, claros y profesionales para WhatsApp, SMS o correo e
 
   if (distPath) {
     console.log(`Serving static production files from: ${distPath}`);
+    app.use("/assets", express.static(path.join(distPath, "assets")));
     app.use(express.static(distPath));
     app.get("*", (_req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
