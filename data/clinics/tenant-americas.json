@@ -1,0 +1,54 @@
+{
+  "pets": [
+    {
+      "id": "pet-test-1",
+      "name": "Rocky",
+      "species": "Perro"
+    }
+  ],
+  "medicalRecords": [
+    {
+      "id": "rec-test-1",
+      "diagnosis": "Control anual"
+    }
+  ],
+  "vaccines": [
+    {
+      "id": "vac-test-1",
+      "vaccineName": "Rabia"
+    }
+  ],
+  "appointments": [
+    {
+      "id": "apt-test-1",
+      "reason": "Consulta General"
+    }
+  ],
+  "inventory": [
+    {
+      "id": "med-test-1",
+      "name": "Amoxicilina"
+    }
+  ],
+  "products": [
+    {
+      "id": "prod-test-1",
+      "name": "Croquetas Premium 15kg"
+    }
+  ],
+  "salesReceipts": [
+    {
+      "id": "sale-test-1",
+      "total": 1250
+    }
+  ],
+  "discharges": [
+    {
+      "id": "dis-test-1",
+      "finalDiagnosis": "Recuperado"
+    }
+  ],
+  "clinicSettings": {
+    "name": "Clínica Veterinaria Las Américas"
+  }
+}
