@@ -25,6 +25,28 @@ function getGeminiClient() {
   return aiClient;
 }
 
+// Helper to recursively find a file or folder up to 3 levels deep
+function findFileOrDirRecursively(startDir, targetName, maxDepth = 3) {
+  if (maxDepth <= 0) return null;
+  try {
+    const entries = fs.readdirSync(startDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.name === "node_modules" || entry.name === ".git") continue;
+      const fullPath = path.join(startDir, entry.name);
+      if (entry.name === targetName) {
+        return fullPath;
+      }
+      if (entry.isDirectory()) {
+        const found = findFileOrDirRecursively(fullPath, targetName, maxDepth - 1);
+        if (found) return found;
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+  return null;
+}
+
 async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
@@ -86,7 +108,7 @@ Genera mensajes empáticos, claros y profesionales para WhatsApp, SMS o correo e
     }
   });
 
-  // Universal static asset mounting (dist/assets, public/assets, assets)
+  // Mount any available static asset directory (/assets)
   const possibleAssetDirs = [
     path.resolve(process.cwd(), "dist", "assets"),
     path.resolve(process.cwd(), "assets"),
@@ -103,45 +125,20 @@ Genera mensajes empáticos, claros y profesionales para WhatsApp, SMS o correo e
     }
   }
 
-  // Smart resolver to find the compiled dist folder anywhere in the repository
-  function findDistPath() {
-    const candidates = [
-      path.resolve(process.cwd(), "dist"),
-      path.resolve(__dirname, "dist"),
-      path.resolve(process.cwd(), "PROYECTO YABET", "dist"),
-      path.resolve(process.cwd(), "Remix-VetCare-Pro---Control-Veterinario-y-Portal-de-Clientes-2026-08-15-bddcb", "dist"),
-    ];
-
-    for (const cand of candidates) {
-      if (fs.existsSync(cand) && fs.existsSync(path.join(cand, "index.html"))) {
-        return cand;
-      }
+  // 1. Check if a compiled dist folder exists anywhere in the workspace
+  const distDir = findFileOrDirRecursively(process.cwd(), "dist");
+  if (distDir && fs.existsSync(path.join(distDir, "index.html"))) {
+    console.log(`Serving static production files from: ${distDir}`);
+    const assetsSubdir = path.join(distDir, "assets");
+    if (fs.existsSync(assetsSubdir)) {
+      app.use("/assets", express.static(assetsSubdir, { maxAge: '1d', immutable: true }));
     }
-
-    try {
-      const items = fs.readdirSync(process.cwd());
-      for (const item of items) {
-        const sub = path.resolve(process.cwd(), item, "dist");
-        if (fs.existsSync(sub) && fs.existsSync(path.join(sub, "index.html"))) {
-          return sub;
-        }
-      }
-    } catch (e) {
-      // ignore
-    }
-    return null;
-  }
-
-  const distPath = findDistPath();
-
-  if (distPath) {
-    console.log(`Serving static production files from: ${distPath}`);
-    app.use(express.static(distPath));
+    app.use(express.static(distDir));
     app.get("*", (_req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+      res.sendFile(path.join(distDir, "index.html"));
     });
   } else {
-    // Check if root index.html has pre-compiled assets
+    // 2. Check if root index.html is pre-compiled
     const rootIndexHtml = path.resolve(process.cwd(), "index.html");
     if (fs.existsSync(rootIndexHtml)) {
       const content = fs.readFileSync(rootIndexHtml, "utf8");
@@ -155,20 +152,13 @@ Genera mensajes empáticos, claros y profesionales para WhatsApp, SMS o correo e
       }
     }
 
-    console.log("No compiled dist folder found, searching root for dynamic Vite...");
-    
+    // 3. Dynamic Vite fallback: locate src/main.tsx anywhere recursively
+    const mainTsxPath = findFileOrDirRecursively(process.cwd(), "main.tsx");
     let appRoot = process.cwd();
-    const possibleRoots = [
-      process.cwd(),
-      __dirname,
-      path.resolve(process.cwd(), "PROYECTO YABET"),
-      path.resolve(process.cwd(), "Remix-VetCare-Pro---Control-Veterinario-y-Portal-de-Clientes-2026-08-15-bddcb"),
-    ];
-    for (const r of possibleRoots) {
-      if (fs.existsSync(path.join(r, "src", "main.tsx")) || fs.existsSync(path.join(r, "index.html"))) {
-        appRoot = r;
-        break;
-      }
+    if (mainTsxPath) {
+      const srcDir = path.dirname(mainTsxPath);
+      appRoot = path.dirname(srcDir);
+      console.log(`Found main.tsx at: ${mainTsxPath}, using root: ${appRoot}`);
     }
 
     const { createServer: createViteServer } = await import("vite");
