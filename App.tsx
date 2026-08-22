@@ -16,6 +16,7 @@ import { VaccinesManager } from './components/vaccines/VaccinesManager';
 import { ApplyVaccineModal } from './components/vaccines/ApplyVaccineModal';
 import { VaccineReminderGeneratorModal } from './components/vaccines/VaccineReminderGeneratorModal';
 import { InventoryManager } from './components/inventory/InventoryManager';
+import { PetShopManager } from './components/petshop/PetShopManager';
 import { VetCopilotModal } from './components/copilot/VetCopilotModal';
 import { ClientHealthPortal } from './components/portal/ClientHealthPortal';
 import { AndroidTutorApp } from './components/android/AndroidTutorApp';
@@ -29,6 +30,7 @@ import { SuperUserMasterPanel } from './components/admin/SuperUserMasterPanel';
 import { OfflineBarrierModal } from './components/common/OfflineBarrierModal';
 import { NetworkDiagnosticsModal } from './components/common/NetworkDiagnosticsModal';
 import { InteractiveTutorial } from './components/common/InteractiveTutorial';
+import { SavingSessionModal } from './components/common/SavingSessionModal';
 import { MedicalRecord, Pet, VaccineRecord } from './types';
 
 const MainAppContent: React.FC = () => {
@@ -56,6 +58,8 @@ const MainAppContent: React.FC = () => {
     setIsNetworkDiagnosticsOpen,
     currentUser,
     isSuperUser,
+    isSavingSessionOnLogout,
+    saveProgressStep,
   } = useVeterinary();
 
   const [creatorViewMode, setCreatorViewMode] = useState<'master' | 'clinic'>('master');
@@ -215,6 +219,8 @@ const MainAppContent: React.FC = () => {
 
                 {activeTab === 'inventory' && <InventoryManager />}
 
+                {activeTab === 'petshop' && <PetShopManager />}
+
                 {activeTab === 'master_tenants' && <MasterTenantsManagement />}
 
                 {activeTab === 'copilot' && (
@@ -347,6 +353,12 @@ const MainAppContent: React.FC = () => {
 
       {/* Interactive Onboarding Tutorial with Balloon Tooltips */}
       <InteractiveTutorial />
+
+      {/* Visual Feedback Modal for Database Persistence on User Logout */}
+      <SavingSessionModal
+        isOpen={isSavingSessionOnLogout}
+        stepMessage={saveProgressStep}
+      />
 
       {/* Toast Notification */}
       {toastMessage && (
