@@ -86,6 +86,23 @@ Genera mensajes empáticos, claros y profesionales para WhatsApp, SMS o correo e
     }
   });
 
+  // Universal static asset mounting (dist/assets, public/assets, assets)
+  const possibleAssetDirs = [
+    path.resolve(process.cwd(), "dist", "assets"),
+    path.resolve(process.cwd(), "assets"),
+    path.resolve(process.cwd(), "public", "assets"),
+    path.resolve(__dirname, "dist", "assets"),
+    path.resolve(__dirname, "assets"),
+    path.resolve(__dirname, "public", "assets"),
+  ];
+
+  for (const assetDir of possibleAssetDirs) {
+    if (fs.existsSync(assetDir)) {
+      console.log(`Mounting static assets from: ${assetDir}`);
+      app.use("/assets", express.static(assetDir, { maxAge: '1d', immutable: true }));
+    }
+  }
+
   // Smart resolver to find the compiled dist folder anywhere in the repository
   function findDistPath() {
     const candidates = [
@@ -119,12 +136,25 @@ Genera mensajes empáticos, claros y profesionales para WhatsApp, SMS o correo e
 
   if (distPath) {
     console.log(`Serving static production files from: ${distPath}`);
-    app.use("/assets", express.static(path.join(distPath, "assets")));
     app.use(express.static(distPath));
     app.get("*", (_req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   } else {
+    // Check if root index.html has pre-compiled assets
+    const rootIndexHtml = path.resolve(process.cwd(), "index.html");
+    if (fs.existsSync(rootIndexHtml)) {
+      const content = fs.readFileSync(rootIndexHtml, "utf8");
+      if (content.includes("/assets/index-")) {
+        console.log("Root index.html is pre-compiled. Serving static site from root directory.");
+        app.use(express.static(process.cwd()));
+        app.get("*", (_req, res) => {
+          res.sendFile(rootIndexHtml);
+        });
+        return;
+      }
+    }
+
     console.log("No compiled dist folder found, searching root for dynamic Vite...");
     
     let appRoot = process.cwd();
