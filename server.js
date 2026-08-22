@@ -137,21 +137,17 @@ Genera mensajes empáticos, claros y profesionales para WhatsApp, SMS o correo e
     app.get("*", (_req, res) => {
       res.sendFile(path.join(distDir, "index.html"));
     });
-  } else {
-    // 2. Check if root index.html is pre-compiled
+  } else if (
+    fs.existsSync(path.resolve(process.cwd(), "index.html")) &&
+    fs.readFileSync(path.resolve(process.cwd(), "index.html"), "utf8").includes("/assets/index-")
+  ) {
     const rootIndexHtml = path.resolve(process.cwd(), "index.html");
-    if (fs.existsSync(rootIndexHtml)) {
-      const content = fs.readFileSync(rootIndexHtml, "utf8");
-      if (content.includes("/assets/index-")) {
-        console.log("Root index.html is pre-compiled. Serving static site from root directory.");
-        app.use(express.static(process.cwd()));
-        app.get("*", (_req, res) => {
-          res.sendFile(rootIndexHtml);
-        });
-        return;
-      }
-    }
-
+    console.log("Root index.html is pre-compiled. Serving static site from root directory.");
+    app.use(express.static(process.cwd()));
+    app.get("*", (_req, res) => {
+      res.sendFile(rootIndexHtml);
+    });
+  } else {
     // 3. Dynamic Vite fallback: locate index.html and main.tsx anywhere recursively
     const indexHtmlPath = findFileOrDirRecursively(process.cwd(), "index.html");
     let appRoot = indexHtmlPath ? path.dirname(indexHtmlPath) : process.cwd();
