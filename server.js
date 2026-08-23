@@ -357,9 +357,6 @@ Genera mensajes empáticos, claros y profesionales para WhatsApp, SMS o correo e
     next();
   });
 
-  // Direct root asset handler for .js and .css files
-  app.use(express.static(process.cwd()));
-
   // 1. Check if a compiled dist folder exists anywhere in the workspace
   const distDir = findFileOrDirRecursively(process.cwd(), "dist");
   if (distDir && fs.existsSync(path.join(distDir, "index.html"))) {
@@ -368,19 +365,13 @@ Genera mensajes empáticos, claros y profesionales para WhatsApp, SMS o correo e
     if (fs.existsSync(assetsSubdir)) {
       app.use("/assets", express.static(assetsSubdir, { maxAge: '1d', immutable: true }));
     }
+    const publicSubdir = path.join(process.cwd(), "public");
+    if (fs.existsSync(publicSubdir)) {
+      app.use(express.static(publicSubdir));
+    }
     app.use(express.static(distDir));
     app.get("*", (_req, res) => {
       res.sendFile(path.join(distDir, "index.html"));
-    });
-  } else if (
-    fs.existsSync(path.resolve(process.cwd(), "index.html")) &&
-    fs.readFileSync(path.resolve(process.cwd(), "index.html"), "utf8").includes("/assets/index-")
-  ) {
-    const rootIndexHtml = path.resolve(process.cwd(), "index.html");
-    console.log("Root index.html is pre-compiled. Serving static site from root directory.");
-    app.use(express.static(process.cwd()));
-    app.get("*", (_req, res) => {
-      res.sendFile(rootIndexHtml);
     });
   } else {
     // 3. Dynamic Vite fallback: locate index.html and main.tsx anywhere recursively
