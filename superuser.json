@@ -1,0 +1,11 @@
+{
+  "username": "superadmin",
+  "name": "Creador del Sistema (Super Usuario)",
+  "isSuperUser": true,
+  "masterBillingCard": {
+    "bankName": "BBVA México",
+    "beneficiaryName": "VetCare Pro SaaS",
+    "accountOrCardNumber": "4152 3138 9012 3456",
+    "clabe": "012180001234567890"
+  }
+}

@@ -1,0 +1,28 @@
+===============================================================================
+       VETERINARIA YELLOW - PAQUETE PORTABLE PARA MEMORIA USB (x32 & x64)
+===============================================================================
+
+Este paquete contiene todo lo necesario para ejecutar el software veterinario 
+directamente desde cualquier memoria USB (pendrive), disco externo o carpeta local, 
+sin requerir instalacion previa ni permisos de Administrador de Windows.
+
+COMPATIBILIDAD DE SISTEMAS:
+- Windows 11 (64-Bit)
+- Windows 10 (32-Bit & 64-Bit)
+- Windows 8 / 8.1 (32-Bit & 64-Bit)
+- Windows 7 SP1 (32-Bit & 64-Bit)
+
+ARCHIVOS INCLUIDOS:
+1. Iniciar_VeterinariaYELLOW_x64.bat -> Ejecutable por lotes para Windows de 64 bits.
+2. Iniciar_VeterinariaYELLOW_x32.bat -> Ejecutable por lotes para Windows de 32 bits.
+3. Instalar_Acceso_Directo_USB.bat   -> Crea un icono en el Escritorio de Windows.
+4. autorun.inf                       -> Asigna el icono y etiqueta oficial a la USB.
+5. index.html                        -> Interfaz clinica autocontenida de respaldo.
+6. datos_clinica_backup.json         -> Copia de seguridad de pacientes y registros.
+
+INSTRUCCIONES DE USO:
+1. Copia toda la carpeta a la raiz de tu memoria USB (ej. E:\, F:\, G:\).
+2. Conecta la memoria USB en la computadora de la clinica o consultorio.
+3. Haz doble clic en "Iniciar_VeterinariaYELLOW_x64.bat" (o x32 si es equipo antiguo).
+4. El sistema abrira automaticamente la ventana clinica a pantalla completa.
+5. Los datos se guardan y pueden sincronizarse exportando/importando el archivo JSON.
