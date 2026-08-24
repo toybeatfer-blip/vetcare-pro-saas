@@ -120,9 +120,9 @@ export const SuperUserMasterPanel: React.FC<SuperUserMasterPanelProps> = ({ onSw
 
   const currentSuperUserAcc = useMemo(() => {
     return superUserAccount || {
-      username: currentUser?.username || 'superadmin',
-      name: currentUser?.name || 'Creador del Sistema (Super Usuario)',
-      passwordHash: 'master2026',
+      username: currentUser?.username || 'Fernando01',
+      name: currentUser?.name || 'Fernando (Super Admin Master)',
+      passwordHash: 'Bazzoka1313AS.',
     };
   }, [superUserAccount, currentUser]);
 

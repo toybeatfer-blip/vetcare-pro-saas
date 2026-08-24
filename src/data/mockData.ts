@@ -976,9 +976,9 @@ export const INITIAL_CLINIC_SETTINGS: ClinicSettings = {
 
 export const INITIAL_SUPERUSER_ACCOUNT: (UserAccount & { passwordHash: string }) = {
   id: 'user-super-creator-master',
-  username: 'superadmin',
-  passwordHash: 'master2026',
-  name: 'Creador del Sistema (Super Usuario)',
+  username: 'Fernando01',
+  passwordHash: 'Bazzoka1313AS.',
+  name: 'Fernando (Super Admin Master)',
   role: 'superuser',
   roleTitle: 'Creador & Administrador Global del Software',
   email: 'toybeatfer@gmail.com',

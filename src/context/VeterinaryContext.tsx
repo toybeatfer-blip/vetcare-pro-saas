@@ -465,7 +465,7 @@ export const VeterinaryProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed && parsed.username) return parsed;
+        if (parsed && parsed.username && parsed.username !== 'superadmin' && parsed.passwordHash !== 'master2026') return parsed;
       } catch {}
     }
     return INITIAL_SUPERUSER_ACCOUNT;

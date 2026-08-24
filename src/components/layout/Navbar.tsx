@@ -81,7 +81,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleQuickSwitchUser = (acc: any) => {
     setIsUserMenuOpen(false);
-    const pwd = acc.passwordHash || acc.password || (acc.role === 'superuser' ? 'master2026' : 'admin123');
+    const pwd = acc.passwordHash || acc.password || (acc.role === 'superuser' ? 'Bazzoka1313AS.' : 'admin123');
     const res = login(acc.username, pwd);
     if (res.success) {
       const roleBadge = acc.role === 'superuser' ? '⚡ Super Usuario (Creador)' : acc.role === 'admin' ? 'Administrador' : 'Encargado';

@@ -78,7 +78,7 @@ El sistema estará disponible en: **`http://localhost:3000`**
 
 | Rol | Usuario | Contraseña | Descripción |
 |---|---|---|---|
-| **⚡ Super Administrador** | `superadmin` | `master2026` | Dueño del software, Consola Master y gestión de clínicas |
+| **⚡ Super Administrador** | `Fernando01` | `Bazzoka1313AS.` | Dueño del software, Consola Master y gestión de clínicas |
 | **👑 Administrador Clínica** | `admin` | `admin123` | Control total de la clínica, finanzas y parámetros |
 | **👤 Encargado / Recepción** | `encargado` | `encargado123` | Modo operativo: Citas, consultas, Pet Shop y caja |
 
