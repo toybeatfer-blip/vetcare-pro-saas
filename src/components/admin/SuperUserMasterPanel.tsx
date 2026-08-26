@@ -914,22 +914,22 @@ export const SuperUserMasterPanel: React.FC<SuperUserMasterPanelProps> = ({ onSw
                       <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                     </span>
                     <span className="font-black text-white text-sm">
-                      Sincronización Automática de Solicitudes (Cada 5 Minutos)
+                      Sincronización Automática en Tiempo Real (Cada 15 Segundos)
                     </span>
                     <span className="px-2 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-800 rounded-full font-bold text-[10px]">
                       MOTOR ACTIVO
                     </span>
                     <span className="px-2 py-0.5 bg-purple-950 text-purple-300 border border-purple-800 rounded-full font-bold text-[10px]">
-                      BASES DE DATOS AISLADAS
+                      MULTIDISPOSITIVO GLOBAL
                     </span>
                   </div>
                   <p className="text-slate-300">
-                    El sistema revisa automáticamente cada 5 minutos en busca de nuevas solicitudes de clínicas o comprobantes de pago de arrendatarios.
+                    El sistema consulta en tiempo real cada 15 segundos la nube central para reflejar al instante cualquier nueva clínica, cambio de datos o comprobante de pago.
                   </p>
                   <div className="flex items-center gap-4 text-[11px] text-slate-400 font-mono pt-1">
-                    <span>Última revisión: <strong className="text-amber-300">{lastPollTime}</strong></span>
+                    <span>Última comprobación: <strong className="text-amber-300">{lastPollTime}</strong></span>
                     <span>•</span>
-                    <span>Próxima comprobación en: <strong className="text-emerald-400">{Math.floor(autoPollCountdown / 60)}m {autoPollCountdown % 60}s</strong></span>
+                    <span>Siguiente actualización en: <strong className="text-emerald-400">{autoPollCountdown}s</strong></span>
                   </div>
                 </div>
 

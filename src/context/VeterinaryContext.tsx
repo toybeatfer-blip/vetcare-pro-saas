@@ -1847,7 +1847,7 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
     try {
       const now = new Date();
       setLastPollTime(now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-      setAutoPollCountdown(300);
+      setAutoPollCountdown(15);
 
       let newClinicsCount = 0;
       let newPaymentsCount = 0;
@@ -1881,7 +1881,7 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
       if (totalNew > 0) {
         setNewRegistrationBadge(prev => prev + totalNew);
         showToast(
-          `🔔 [Auto-revisión 5 min]: Se detectaron ${newClinicsCount > 0 ? `${newClinicsCount} nueva(s) clínica(s) ` : ''}${newPaymentsCount > 0 ? `${newPaymentsCount} solicitud(es) de pago` : ''}.`,
+          `🔔 [Sincronización Automática]: Se detectaron ${newClinicsCount > 0 ? `${newClinicsCount} nueva(s) clínica(s) ` : ''}${newPaymentsCount > 0 ? `${newPaymentsCount} solicitud(es) de pago` : ''}.`,
           'info'
         );
       }
@@ -1890,23 +1890,32 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
     }
   };
 
-  // Initial poll on startup and auto-sync on browser tab focus
+  // Initial poll on startup and auto-sync on window focus / tab visibility
   useEffect(() => {
     manualPollRequestsNow();
     const handleWindowFocus = () => {
       manualPollRequestsNow();
     };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        manualPollRequestsNow();
+      }
+    };
     window.addEventListener('focus', handleWindowFocus);
-    return () => window.removeEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
-  // Background 5-minute Auto-poll loop & 1-second countdown ticker
+  // Background 15-second Real-Time Auto-poll loop & countdown ticker
   useEffect(() => {
     const timer = setInterval(() => {
       setAutoPollCountdown(prev => {
         if (prev <= 1) {
           manualPollRequestsNow();
-          return 300;
+          return 15;
         }
         return prev - 1;
       });
