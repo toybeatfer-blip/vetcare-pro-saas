@@ -1857,7 +1857,7 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
           fetch('/api/payment-requests').then(r => r.json()).catch(() => null),
         ]);
 
-        if (tenantsRes?.success && Array.isArray(tenantsRes.tenants) && tenantsRes.tenants.length > 0) {
+        if (tenantsRes?.success && Array.isArray(tenantsRes.tenants)) {
           if (tenantsRes.tenants.length > tenants.length) {
             newClinicsCount = tenantsRes.tenants.length - tenants.length;
           }
