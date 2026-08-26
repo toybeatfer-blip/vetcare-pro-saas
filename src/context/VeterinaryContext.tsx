@@ -1267,9 +1267,17 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
         updatedAt: new Date().toISOString().split('T')[0],
       };
       localStorage.setItem(LOCAL_STORAGE_KEYS.MASTER_BILLING, JSON.stringify(updated));
+
+      // Push to backend API
+      fetch('/api/master-billing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: updated }),
+      }).catch(console.error);
+
       return updated;
     });
-    showToast('Datos de cobro oficiales y correo del propietario actualizados correctamente.', 'success');
+    showToast('Datos de contacto y cobro oficiales guardados permanentemente en la nube.', 'success');
   };
 
   const submitRenewalPaymentRequest = (data: {
@@ -1501,6 +1509,15 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
     setTenants(updatedTenants);
     localStorage.setItem(LOCAL_STORAGE_KEYS.TENANTS, JSON.stringify(updatedTenants));
 
+    const targetT = updatedTenants.find(t => t.id === id);
+    if (targetT) {
+      fetch(`/api/tenants/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(targetT),
+      }).catch(console.error);
+    }
+
     fetch('/api/tenants/sync-all', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1603,79 +1620,118 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
   };
 
   const toggleTenantLock = (id: string, lock: boolean, reason?: string) => {
-    setTenants(prev =>
-      prev.map(t => {
-        if (t.id === id) {
-          return {
-            ...t,
-            isLocked: lock,
-            status: lock ? 'locked' : 'active',
-            lockReason: lock ? (reason || 'Bloqueado por creador') : undefined,
-          };
-        }
-        return t;
-      })
-    );
-    if (id === 'tenant-yellow-local') {
+    let targetUpdated: TenantClinic | null = null;
+    const updatedTenants = tenants.map(t => {
+      if (t.id === id) {
+        targetUpdated = {
+          ...t,
+          isLocked: lock,
+          status: (lock ? 'locked' : 'active') as LicenseStatus,
+          lockReason: lock ? (reason || 'Bloqueado por el Super Administrador') : undefined,
+        };
+        return targetUpdated;
+      }
+      return t;
+    });
+
+    setTenants(updatedTenants);
+    localStorage.setItem(LOCAL_STORAGE_KEYS.TENANTS, JSON.stringify(updatedTenants));
+
+    // Push update to cloud server API
+    if (targetUpdated) {
+      fetch(`/api/tenants/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(targetUpdated),
+      }).catch(console.error);
+    }
+
+    fetch('/api/tenants/sync-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenants: updatedTenants }),
+    }).catch(console.error);
+
+    if (id === activeTenantId || id === 'tenant-central-local') {
       setSystemLicense(prev => ({
         ...prev,
         isLocked: lock,
-        status: lock ? 'locked' : 'active',
-        lockReason: lock ? (reason || 'Bloqueado por creador') : undefined,
+        status: (lock ? 'locked' : 'active') as LicenseStatus,
+        lockReason: lock ? (reason || 'Bloqueado por el Super Administrador') : undefined,
       }));
     }
+
     showToast(
-      lock ? `Licencia de arrendado bloqueada inmediatamente.` : `Licencia de arrendado reactivada con éxito.`,
-      lock ? 'error' : 'success'
+      lock ? `Licencia de arrendado suspendida/bloqueada inmediatamente.` : `Licencia de arrendado reactivada con éxito.`,
+      lock ? 'warning' : 'success'
     );
   };
 
   const extendTenantLicense = (id: string, durationType: 'month' | 'year' | 'grace_7') => {
-    setTenants(prev =>
-      prev.map(t => {
-        if (t.id === id) {
-          const today = new Date();
-          const currentExp = new Date(t.expirationDate);
-          const baseDate = currentExp > today ? currentExp : today;
-          const newExp = new Date(baseDate);
+    let targetUpdated: TenantClinic | null = null;
+    const updatedTenants = tenants.map(t => {
+      if (t.id === id) {
+        const today = new Date();
+        const currentExp = new Date(t.expirationDate);
+        const baseDate = currentExp > today ? currentExp : today;
+        const newExp = new Date(baseDate);
 
-          if (durationType === 'month') {
-            newExp.setDate(newExp.getDate() + 30);
-          } else if (durationType === 'year') {
-            newExp.setDate(newExp.getDate() + 365);
-          } else if (durationType === 'grace_7') {
-            newExp.setDate(newExp.getDate() + 7);
-          }
-
-          const expDateStr = newExp.toISOString().split('T')[0];
-          const todayStr = today.toISOString().split('T')[0];
-
-          // If local active clinic, sync local systemLicense
-          if (id === 'tenant-yellow-local') {
-            setSystemLicense(prevLic => ({
-              ...prevLic,
-              status: 'active',
-              isLocked: false,
-              lockReason: undefined,
-              expirationDate: expDateStr,
-              lastPaymentDate: todayStr,
-            }));
-          }
-
-          return {
-            ...t,
-            expirationDate: expDateStr,
-            lastPaymentDate: todayStr,
-            status: 'active',
-            isLocked: false,
-            lockReason: undefined,
-          };
+        if (durationType === 'month') {
+          newExp.setDate(newExp.getDate() + 30);
+        } else if (durationType === 'year') {
+          newExp.setDate(newExp.getDate() + 365);
+        } else if (durationType === 'grace_7') {
+          newExp.setDate(newExp.getDate() + 7);
         }
-        return t;
-      })
-    );
+
+        const expDateStr = newExp.toISOString().split('T')[0];
+        const todayStr = today.toISOString().split('T')[0];
+
+        targetUpdated = {
+          ...t,
+          expirationDate: expDateStr,
+          lastPaymentDate: todayStr,
+          status: 'active' as LicenseStatus,
+          isLocked: false,
+          lockReason: undefined,
+        };
+        return targetUpdated;
+      }
+      return t;
+    });
+
+    setTenants(updatedTenants);
+    localStorage.setItem(LOCAL_STORAGE_KEYS.TENANTS, JSON.stringify(updatedTenants));
+
+    // Push update to cloud server API
+    if (targetUpdated) {
+      fetch(`/api/tenants/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(targetUpdated),
+      }).catch(console.error);
+    }
+
+    fetch('/api/tenants/sync-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenants: updatedTenants }),
+    }).catch(console.error);
+
+    if (id === activeTenantId || id === 'tenant-central-local') {
+      const expDateStr = targetUpdated?.expirationDate || new Date().toISOString().split('T')[0];
+      setSystemLicense(prevLic => ({
+        ...prevLic,
+        status: 'active',
+        isLocked: false,
+        lockReason: undefined,
+        expirationDate: expDateStr,
+        lastPaymentDate: new Date().toISOString().split('T')[0],
+      }));
+    }
+
     const addedDays = durationType === 'month' ? '30 días (+1 Mes)' : durationType === 'year' ? '365 días (+1 Año)' : '7 días de gracia';
-    showToast(`Vigencia de arrendado extendida por ${addedDays}.`, 'success');
+    showToast(`Vigencia de arrendado extendida por ${addedDays} y guardada en la nube.`, 'success');
   };
 
   const generateTenantKey = (id: string, plan: LicensePlan = 'mensual'): string => {
@@ -1749,8 +1805,7 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
 
     const todayStr = new Date().toISOString().split('T')[0];
 
-    setTenants(prev =>
-      prev.map(t => {
+    const updatedTenantsList = tenants.map(t => {
         if (t.id === tenantId) {
           if (role === 'admin') {
             const currentAdmin = t.adminCredentials || {
@@ -1795,8 +1850,25 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
           }
         }
         return t;
-      })
-    );
+      });
+
+    setTenants(updatedTenantsList);
+    localStorage.setItem(LOCAL_STORAGE_KEYS.TENANTS, JSON.stringify(updatedTenantsList));
+
+    const updatedT = updatedTenantsList.find(t => t.id === tenantId);
+    if (updatedT) {
+      fetch(`/api/tenants/${tenantId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedT),
+      }).catch(console.error);
+    }
+
+    fetch('/api/tenants/sync-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenants: updatedTenantsList }),
+    }).catch(console.error);
 
     // If this tenant is currently active or is the local central clinic, sync userAccounts
     if (tenantId === 'tenant-central-local' || tenantId === activeTenantId || targetTenant.clinicName.toLowerCase() === clinicSettings.name.toLowerCase()) {
@@ -1974,11 +2046,17 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
       let newPaymentsCount = 0;
 
       try {
-        const [tenantsRes, paymentsRes, deletedRes] = await Promise.all([
+        const [tenantsRes, paymentsRes, deletedRes, billingRes] = await Promise.all([
           fetch('/api/tenants').then(r => r.json()).catch(() => null),
           fetch('/api/payment-requests').then(r => r.json()).catch(() => null),
           fetch('/api/deleted-tenants').then(r => r.json()).catch(() => null),
+          fetch('/api/master-billing').then(r => r.json()).catch(() => null),
         ]);
+
+        if (billingRes?.success && billingRes.settings && typeof billingRes.settings === 'object') {
+          setMasterBillingSettings(prev => ({ ...prev, ...billingRes.settings }));
+          localStorage.setItem(LOCAL_STORAGE_KEYS.MASTER_BILLING, JSON.stringify(billingRes.settings));
+        }
 
         const serverDeletedIds: string[] = Array.isArray(deletedRes?.deletedIds) ? deletedRes.deletedIds : [];
         let localDeletedIds: string[] = [];

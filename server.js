@@ -325,17 +325,13 @@ async function startServer() {
 
   // 5. SuperUser Settings & Master Credentials API
   const SUPERUSER_FILE = path.join(DATA_DIR, "superuser.json");
+  const MASTER_BILLING_FILE = path.join(DATA_DIR, "master_billing.json");
+
   app.get("/api/superuser/settings", (_req, res) => {
     const settings = readJson(SUPERUSER_FILE, {
-      username: "creator",
-      name: "Creador del Sistema",
+      username: "Fernando01",
+      name: "Fernando (Super Admin Master)",
       isSuperUser: true,
-      masterBillingCard: {
-        bankName: "BBVA México",
-        beneficiaryName: "VetCare Pro SaaS",
-        accountOrCardNumber: "4152 3138 9012 3456",
-        clabe: "012180001234567890"
-      }
     });
     res.json({ success: true, settings });
   });
@@ -347,6 +343,23 @@ async function startServer() {
       return res.json({ success: true, settings, timestamp: new Date().toISOString() });
     }
     res.status(400).json({ success: false, error: "Invalid superuser settings" });
+  });
+
+  // 6. Master Billing & Contact Information API
+  app.get("/api/master-billing", (_req, res) => {
+    const billing = readJson(MASTER_BILLING_FILE, null);
+    res.json({ success: true, settings: billing });
+  });
+
+  app.post("/api/master-billing", (req, res) => {
+    const { settings } = req.body;
+    if (settings && typeof settings === 'object') {
+      const existing = readJson(MASTER_BILLING_FILE, {});
+      const merged = { ...(existing || {}), ...settings, updatedAt: new Date().toISOString() };
+      writeJson(MASTER_BILLING_FILE, merged);
+      return res.json({ success: true, settings: merged, timestamp: new Date().toISOString() });
+    }
+    res.status(400).json({ success: false, error: "Invalid billing settings payload" });
   });
 
   // Gemini Veterinary Assistant API
