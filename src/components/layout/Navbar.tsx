@@ -184,11 +184,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                   aria-label="Seleccionar mascota"
                   className="w-full appearance-none pl-8 pr-8 py-1.5 text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 >
-                  {pets.map((pet) => (
-                    <option key={pet.id} value={pet.id}>
-                      {pet.name} ({pet.species} - {pet.owner.name.split(' ')[0]})
-                    </option>
-                  ))}
+                  {pets.length === 0 ? (
+                    <option value="">Sin pacientes registrados</option>
+                  ) : (
+                    pets.map((pet) => (
+                      <option key={pet.id} value={pet.id}>
+                        {pet.name} ({pet.species} - {pet.owner.name.split(' ')[0]})
+                      </option>
+                    ))
+                  )}
                 </select>
                 <PawPrint className="w-3.5 h-3.5 text-indigo-600 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <ChevronDown className="w-3.5 h-3.5 text-indigo-600 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />

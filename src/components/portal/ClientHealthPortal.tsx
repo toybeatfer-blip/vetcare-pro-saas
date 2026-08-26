@@ -47,8 +47,25 @@ export const ClientHealthPortal: React.FC<ClientHealthPortalProps> = ({ onOpenNe
   const [selectedStudyForViewer, setSelectedStudyForViewer] = useState<DiagnosticImage | null>(null);
 
   const currentPet = pets.find((p) => p.id === activePetId) || pets[0];
+
   if (!currentPet) {
-    return <div className="p-8 text-center text-slate-500">No hay mascotas disponibles.</div>;
+    return (
+      <div className="max-w-md mx-auto p-8 my-12 bg-white rounded-3xl border border-slate-200 shadow-sm text-center space-y-4">
+        <div className="w-16 h-16 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto shadow-inner">
+          <PawPrint className="w-8 h-8" />
+        </div>
+        <h2 className="text-lg font-black text-slate-900">Portal de Salud para Tutores</h2>
+        <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+          Aún no hay pacientes registrados en esta clínica. Registra a tu primera mascota desde el Software Clínico para visualizar su Carnet de Salud Digital y consultas médicas.
+        </p>
+        <button
+          onClick={() => setViewMode('admin')}
+          className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md transition-all inline-flex items-center gap-2 cursor-pointer"
+        >
+          <span>Ir al Software Clínico</span>
+        </button>
+      </div>
+    );
   }
 
   const petVaccines = vaccines.filter((v) => v.petId === currentPet.id);

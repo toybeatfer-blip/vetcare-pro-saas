@@ -1128,25 +1128,7 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
         if (Array.isArray(parsed)) return parsed.map(normalizePaymentRequest);
       } catch {}
     }
-    return [
-      {
-        id: 'req-sample-1',
-        clinicName: 'Clínica Veterinaria San Pedro',
-        directorName: 'Dr. Fernando Garza',
-        email: 'admin.monterrey@veterinaria.com',
-        phone: '+52 81 8399 2200',
-        plan: 'mensual',
-        amount: 599,
-        currency: 'MXN',
-        paymentMethod: 'spei',
-        referenceFolio: 'SPEI-849102-2026',
-        paymentDate: new Date().toISOString().replace('T', ' ').substring(0, 16),
-        status: 'pending',
-        notifiedToSuperUser: true,
-        superUserEmail: 'super.admin@vetcare.master.com',
-        notes: 'Transferencia bancaria SPEI enviada. Pendiente de verificación por Super Usuario dentro de 24h.',
-      },
-    ];
+    return [];
   });
 
   const [masterBillingSettings, setMasterBillingSettings] = useState<MasterBillingSettings>(() => {
@@ -3004,6 +2986,10 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
     setStockMovements(INITIAL_STOCK_MOVEMENTS);
     setClinicSettings(INITIAL_CLINIC_SETTINGS);
     setReminders([]);
+    setProducts(INITIAL_PETSHOP_PRODUCTS);
+    setSalesReceipts(INITIAL_PETSHOP_SALES);
+    setCashShifts([]);
+    setActiveShift(null);
 
     localStorage.setItem(LOCAL_STORAGE_KEYS.PETS, JSON.stringify(INITIAL_PETS));
     localStorage.setItem(LOCAL_STORAGE_KEYS.RECORDS, JSON.stringify(INITIAL_MEDICAL_RECORDS));
@@ -3013,8 +2999,12 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
     localStorage.setItem(LOCAL_STORAGE_KEYS.MOVEMENTS, JSON.stringify(INITIAL_STOCK_MOVEMENTS));
     localStorage.setItem(LOCAL_STORAGE_KEYS.SETTINGS, JSON.stringify(INITIAL_CLINIC_SETTINGS));
     localStorage.removeItem(LOCAL_STORAGE_KEYS.REMINDERS);
+    localStorage.setItem('vet_petshop_products', JSON.stringify(INITIAL_PETSHOP_PRODUCTS));
+    localStorage.setItem('vet_petshop_sales', JSON.stringify(INITIAL_PETSHOP_SALES));
+    localStorage.setItem('vet_cash_shifts_v1', JSON.stringify([]));
+    localStorage.removeItem('vet_active_cash_shift_v1');
 
-    showToast('Base de datos reiniciada a los valores predeterminados', 'info');
+    showToast('Base de datos inicializada limpia (0 pacientes, 0 inventario y 0 ventas).', 'info');
   };
 
   // PERSISTENCIA COMPLETA DE TODOS LOS CAMBIOS DE LA SESIÓN EN LA BASE DE DATOS

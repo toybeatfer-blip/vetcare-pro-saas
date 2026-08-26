@@ -20,6 +20,7 @@ import {
   QrCode,
   Smartphone,
   ShoppingBag,
+  PawPrint,
 } from 'lucide-react';
 import { Appointment, Pet, VaccineRecord } from '../../types';
 
@@ -236,61 +237,81 @@ export const VeterinaryDashboard: React.FC<VeterinaryDashboardProps> = ({
           <div>
             <div className="flex items-center justify-between mb-4 relative z-10">
               <h2 className="font-bold text-lg text-slate-900">Paciente Destacado</h2>
-              <button
-                onClick={() => featuredPet && onSelectPet(featuredPet.id)}
-                className="text-xs font-bold text-indigo-600 hover:text-indigo-800"
-              >
-                Ver Ficha
-              </button>
+              {featuredPet && (
+                <button
+                  onClick={() => onSelectPet(featuredPet.id)}
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800"
+                >
+                  Ver Ficha
+                </button>
+              )}
             </div>
 
             {featuredPet ? (
-              <div className="flex items-start space-x-5 relative z-10">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-slate-100 border-4 border-white shadow-md overflow-hidden shrink-0">
-                  {featuredPet.photoUrl ? (
-                    <img
-                      src={featuredPet.photoUrl}
-                      alt={featuredPet.name}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-3xl font-black italic">
-                      {featuredPet.name.charAt(0)}
+              <>
+                <div className="flex items-start space-x-5 relative z-10">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-slate-100 border-4 border-white shadow-md overflow-hidden shrink-0">
+                    {featuredPet.photoUrl ? (
+                      <img
+                        src={featuredPet.photoUrl}
+                        alt={featuredPet.name}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-3xl font-black italic">
+                        {featuredPet.name.charAt(0)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-2xl font-black text-slate-900 truncate">{featuredPet.name}</h3>
+                    <p className="text-slate-500 font-medium text-xs mt-0.5">
+                      {featuredPet.breed} • {featuredPet.ageDisplay || `${featuredPet.species}`}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold">
+                        ESTABLE
+                      </span>
+                      <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold">
+                        REGISTRADO
+                      </span>
                     </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-2xl font-black text-slate-900 truncate">{featuredPet.name}</h3>
-                  <p className="text-slate-500 font-medium text-xs mt-0.5">
-                    {featuredPet.breed} • {featuredPet.age} {featuredPet.ageUnit}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold">
-                      ESTABLE
-                    </span>
-                    <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold">
-                      VACUNA AL DÍA
-                    </span>
                   </div>
                 </div>
-              </div>
-            ) : null}
 
-            <div className="mt-6 grid grid-cols-2 gap-4">
-              <div className="p-4 bg-slate-50 rounded-2xl">
-                <p className="text-xs text-slate-400 font-bold uppercase">Último Peso</p>
-                <p className="text-xl font-black text-slate-900 mt-0.5">
-                  {featuredPet?.weightKg ? `${featuredPet.weightKg} kg` : '32.4 kg'}
+                <div className="mt-6 grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-slate-50 rounded-2xl">
+                    <p className="text-xs text-slate-400 font-bold uppercase">Último Peso</p>
+                    <p className="text-xl font-black text-slate-900 mt-0.5">
+                      {featuredPet.weightKg ? `${featuredPet.weightKg} kg` : '---'}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-2xl">
+                    <p className="text-xs text-slate-400 font-bold uppercase">Última Visita</p>
+                    <p className="text-xl font-black text-slate-900 mt-0.5">
+                      {featuredPetRecord ? featuredPetRecord.date.slice(5) : 'Hoy'}
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="py-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                <PawPrint className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                <p className="text-sm font-bold text-slate-700">Sin pacientes registrados</p>
+                <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+                  Registra tu primer paciente para ver su ficha clínica y métricas de salud aquí.
                 </p>
+                <button
+                  type="button"
+                  onClick={onOpenNewPatient}
+                  className="mt-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Registrar Primer Paciente</span>
+                </button>
               </div>
-              <div className="p-4 bg-slate-50 rounded-2xl">
-                <p className="text-xs text-slate-400 font-bold uppercase">Última Visita</p>
-                <p className="text-xl font-black text-slate-900 mt-0.5">
-                  {featuredPetRecord ? featuredPetRecord.date.slice(5) : '12 Oct'}
-                </p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -398,31 +419,37 @@ export const VeterinaryDashboard: React.FC<VeterinaryDashboardProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {recentRecords.map((rec, index) => {
-              const pet = getPetInfo(rec.petId);
-              return (
-                <div
-                  key={rec.id}
-                  onClick={() => pet && onSelectPet(pet.id)}
-                  className={`cursor-pointer group ${
-                    index < recentRecords.length - 1 ? 'lg:border-r lg:border-slate-100 lg:pr-4' : ''
-                  }`}
-                >
-                  <p className="text-xs text-slate-400 font-bold uppercase mb-1">{rec.date}</p>
-                  <p className="text-sm font-bold text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition-colors">
-                    {rec.reason}
-                  </p>
-                  <p className="text-xs text-indigo-600 font-medium mt-0.5">
-                    Paciente: <span className="font-bold">{pet?.name || 'Mascota'}</span>
-                  </p>
-                  <p className="text-xs text-slate-500 line-clamp-2 mt-1.5 leading-relaxed">
-                    {rec.diagnosis}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
+          {recentRecords.length === 0 ? (
+            <div className="py-8 text-center text-slate-400 text-xs font-medium bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+              No hay atenciones clínicas registradas todavía. Inicie una nueva consulta médica para comenzar el historial clínico.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {recentRecords.map((rec, index) => {
+                const pet = getPetInfo(rec.petId);
+                return (
+                  <div
+                    key={rec.id}
+                    onClick={() => pet && onSelectPet(pet.id)}
+                    className={`cursor-pointer group ${
+                      index < recentRecords.length - 1 ? 'lg:border-r lg:border-slate-100 lg:pr-4' : ''
+                    }`}
+                  >
+                    <p className="text-xs text-slate-400 font-bold uppercase mb-1">{rec.date}</p>
+                    <p className="text-sm font-bold text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition-colors">
+                      {rec.reason}
+                    </p>
+                    <p className="text-xs text-indigo-600 font-medium mt-0.5">
+                      Paciente: <span className="font-bold">{pet?.name || 'Mascota'}</span>
+                    </p>
+                    <p className="text-xs text-slate-500 line-clamp-2 mt-1.5 leading-relaxed">
+                      {rec.diagnosis}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Bento Tile 6: Estado de Salud Global (Col 3) */}
