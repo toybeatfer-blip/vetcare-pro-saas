@@ -61,6 +61,8 @@ async function startServer() {
 
   const TENANTS_FILE = path.join(DATA_DIR, "tenants.json");
   const PAYMENTS_FILE = path.join(DATA_DIR, "payments.json");
+  const DELETED_TENANTS_FILE = path.join(DATA_DIR, "deleted_tenants.json");
+  const DEMO_TENANT_IDS = ['tenant-central-local', 'tenant-americas', 'tenant-1', 'tenant-2', 'tenant-sample-1'];
 
   // Helper to read/write JSON safely
   const readJson = (filePath, fallback = null) => {
@@ -91,20 +93,35 @@ async function startServer() {
 
   // 1. Multi-Tenant List & Auto-Poll API
   app.get("/api/tenants", (_req, res) => {
-    const tenants = readJson(TENANTS_FILE, null);
+    const rawTenants = readJson(TENANTS_FILE, []);
+    const deletedList = readJson(DELETED_TENANTS_FILE, []);
+    const deletedIds = Array.isArray(deletedList) ? deletedList : [];
+    const tenantsList = Array.isArray(rawTenants) ? rawTenants : [];
+    const tenants = tenantsList.filter(t => t && t.id && !deletedIds.includes(t.id) && !DEMO_TENANT_IDS.includes(t.id));
     res.json({ success: true, tenants });
+  });
+
+  app.get("/api/deleted-tenants", (_req, res) => {
+    const deletedList = readJson(DELETED_TENANTS_FILE, []);
+    res.json({ success: true, deletedIds: Array.isArray(deletedList) ? deletedList : [] });
   });
 
   app.post("/api/tenants/sync-all", (req, res) => {
     const { tenants } = req.body;
     if (Array.isArray(tenants)) {
+      const deletedList = readJson(DELETED_TENANTS_FILE, []);
+      const deletedIds = Array.isArray(deletedList) ? deletedList : [];
       const existing = readJson(TENANTS_FILE, []);
       const currentList = Array.isArray(existing) ? existing : [];
-      // Safe merge: preserve all existing server tenants so registrations from other devices are never lost
+
       const map = new Map();
-      currentList.forEach(t => { if (t && t.id) map.set(t.id, t); });
+      currentList.forEach(t => { 
+        if (t && t.id && !deletedIds.includes(t.id) && !DEMO_TENANT_IDS.includes(t.id)) {
+          map.set(t.id, t);
+        }
+      });
       tenants.forEach(t => {
-        if (t && t.id) {
+        if (t && t.id && !deletedIds.includes(t.id) && !DEMO_TENANT_IDS.includes(t.id)) {
           const prev = map.get(t.id) || {};
           map.set(t.id, { ...prev, ...t });
         }
@@ -119,6 +136,12 @@ async function startServer() {
   app.post("/api/tenants/register", (req, res) => {
     const { tenant } = req.body;
     if (tenant && tenant.id) {
+      // Remove from deleted list if re-registered explicitly
+      const deletedList = readJson(DELETED_TENANTS_FILE, []);
+      if (Array.isArray(deletedList) && deletedList.includes(tenant.id)) {
+        writeJson(DELETED_TENANTS_FILE, deletedList.filter(id => id !== tenant.id));
+      }
+
       const existing = readJson(TENANTS_FILE, []);
       const currentList = Array.isArray(existing) ? existing : [];
       const updated = [tenant, ...currentList.filter(t => t.id !== tenant.id)];
@@ -266,13 +289,23 @@ async function startServer() {
   app.delete("/api/tenants/:tenantId", (req, res) => {
     const tenantId = (req.params.tenantId || "").replace(/[^a-zA-Z0-9_-]/g, "");
     
-    // Remove from tenants.json
+    // 1. Record in deleted blacklist
+    if (tenantId) {
+      const deletedList = readJson(DELETED_TENANTS_FILE, []);
+      const currentDeleted = Array.isArray(deletedList) ? deletedList : [];
+      if (!currentDeleted.includes(tenantId)) {
+        currentDeleted.push(tenantId);
+        writeJson(DELETED_TENANTS_FILE, currentDeleted);
+      }
+    }
+
+    // 2. Remove from tenants.json
     const existing = readJson(TENANTS_FILE, []);
     const currentList = Array.isArray(existing) ? existing : [];
     const updated = currentList.filter(t => t.id !== tenantId);
     writeJson(TENANTS_FILE, updated);
 
-    // Remove isolated clinic db file
+    // 3. Remove isolated clinic db file
     const clinicFile = path.join(CLINICS_DIR, `${tenantId}.json`);
     if (fs.existsSync(clinicFile)) {
       fs.unlinkSync(clinicFile);

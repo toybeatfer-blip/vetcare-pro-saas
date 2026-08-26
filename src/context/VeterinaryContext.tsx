@@ -312,6 +312,117 @@ const LOCAL_STORAGE_KEYS = {
   TUTORIAL_COMPLETED: 'vetcare_tutorial_completed_v1',
 };
 
+// Auto-purification of demo and deleted data on any device
+(() => {
+  try {
+    const STORAGE_PURGE_KEY = 'vetcare_storage_clean_prod_v2';
+    if (localStorage.getItem(STORAGE_PURGE_KEY) !== 'true') {
+      const keysToClean = [
+        'vet_pets', 'vet_records', 'vet_vaccines', 'vet_appointments', 'vet_inventory',
+        'vet_movements', 'vet_tenants', 'vet_payment_requests', 'vet_products', 'vet_sales',
+        'vet_petshop_products', 'vet_petshop_sales', 'vet_medical_discharges', 'vet_cash_shifts_v1',
+        'vet_active_cash_shift_v1',
+      ];
+      keysToClean.forEach(k => {
+        try { localStorage.removeItem(k); } catch {}
+      });
+
+      const DEMO_TENANT_IDS = ['tenant-central-local', 'tenant-americas', 'tenant-1', 'tenant-2', 'tenant-sample-1'];
+      const rawTenants = localStorage.getItem(LOCAL_STORAGE_KEYS.TENANTS);
+      if (rawTenants) {
+        try {
+          const parsed = JSON.parse(rawTenants);
+          if (Array.isArray(parsed)) {
+            const cleanTenants = parsed.filter(t => t && t.id && !DEMO_TENANT_IDS.includes(t.id) && t.clinicName !== 'Clínica Veterinaria Central');
+            localStorage.setItem(LOCAL_STORAGE_KEYS.TENANTS, JSON.stringify(cleanTenants));
+          }
+        } catch {}
+      }
+
+      const rawPets = localStorage.getItem(LOCAL_STORAGE_KEYS.PETS);
+      if (rawPets) {
+        try {
+          const parsed = JSON.parse(rawPets);
+          if (Array.isArray(parsed)) {
+            const cleanPets = parsed.filter(p => p && p.id && !['pet-1', 'pet-2', 'pet-3', 'pet-4', 'pet-5'].includes(p.id) && !['Max', 'Luna', 'Rocky', 'Milo'].includes(p.name));
+            localStorage.setItem(LOCAL_STORAGE_KEYS.PETS, JSON.stringify(cleanPets));
+          }
+        } catch {}
+      }
+
+      const rawRecords = localStorage.getItem(LOCAL_STORAGE_KEYS.RECORDS);
+      if (rawRecords) {
+        try {
+          const parsed = JSON.parse(rawRecords);
+          if (Array.isArray(parsed)) {
+            const clean = parsed.filter(r => r && r.id && !r.id.startsWith('rec-'));
+            localStorage.setItem(LOCAL_STORAGE_KEYS.RECORDS, JSON.stringify(clean));
+          }
+        } catch {}
+      }
+
+      const rawVaccines = localStorage.getItem(LOCAL_STORAGE_KEYS.VACCINES);
+      if (rawVaccines) {
+        try {
+          const parsed = JSON.parse(rawVaccines);
+          if (Array.isArray(parsed)) {
+            const clean = parsed.filter(v => v && v.id && !v.id.startsWith('vac-'));
+            localStorage.setItem(LOCAL_STORAGE_KEYS.VACCINES, JSON.stringify(clean));
+          }
+        } catch {}
+      }
+
+      const rawApts = localStorage.getItem(LOCAL_STORAGE_KEYS.APPOINTMENTS);
+      if (rawApts) {
+        try {
+          const parsed = JSON.parse(rawApts);
+          if (Array.isArray(parsed)) {
+            const clean = parsed.filter(a => a && a.id && !a.id.startsWith('apt-'));
+            localStorage.setItem(LOCAL_STORAGE_KEYS.APPOINTMENTS, JSON.stringify(clean));
+          }
+        } catch {}
+      }
+
+      const rawInv = localStorage.getItem(LOCAL_STORAGE_KEYS.INVENTORY);
+      if (rawInv) {
+        try {
+          const parsed = JSON.parse(rawInv);
+          if (Array.isArray(parsed)) {
+            const clean = parsed.filter(m => m && m.id && !m.id.startsWith('med-'));
+            localStorage.setItem(LOCAL_STORAGE_KEYS.INVENTORY, JSON.stringify(clean));
+          }
+        } catch {}
+      }
+
+      const rawMov = localStorage.getItem(LOCAL_STORAGE_KEYS.MOVEMENTS);
+      if (rawMov) {
+        try {
+          const parsed = JSON.parse(rawMov);
+          if (Array.isArray(parsed)) {
+            const clean = parsed.filter(m => m && m.id && !m.id.startsWith('mov-'));
+            localStorage.setItem(LOCAL_STORAGE_KEYS.MOVEMENTS, JSON.stringify(clean));
+          }
+        } catch {}
+      }
+
+      const rawPayments = localStorage.getItem(LOCAL_STORAGE_KEYS.PAYMENT_REQUESTS);
+      if (rawPayments) {
+        try {
+          const parsed = JSON.parse(rawPayments);
+          if (Array.isArray(parsed)) {
+            const clean = parsed.filter(p => p && p.id !== 'req-sample-1');
+            localStorage.setItem(LOCAL_STORAGE_KEYS.PAYMENT_REQUESTS, JSON.stringify(clean));
+          }
+        } catch {}
+      }
+
+      localStorage.setItem(STORAGE_PURGE_KEY, 'true');
+    }
+  } catch (e) {
+    console.error('Storage purge error:', e);
+  }
+})();
+
 export const VeterinaryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [viewMode, setViewMode] = useState<ViewMode>('admin');
@@ -1403,22 +1514,32 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
     const tenantToDelete = tenants.find(t => t.id === id);
     if (!tenantToDelete) return false;
 
-    // 1. Remove from tenants list
+    // 1. Blacklist locally
+    let deletedList: string[] = [];
+    try {
+      const rawDel = localStorage.getItem('vet_deleted_tenants');
+      if (rawDel) deletedList = JSON.parse(rawDel);
+    } catch {}
+    if (!deletedList.includes(id)) {
+      deletedList.push(id);
+      localStorage.setItem('vet_deleted_tenants', JSON.stringify(deletedList));
+    }
+
+    // 2. Remove from tenants list
     const updatedTenants = tenants.filter(t => t.id !== id);
     setTenants(updatedTenants);
     localStorage.setItem(LOCAL_STORAGE_KEYS.TENANTS, JSON.stringify(updatedTenants));
 
-    fetch('/api/tenants/sync-all', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tenants: updatedTenants }),
+    // 3. Explicitly delete on server
+    fetch(`/api/tenants/${id}`, {
+      method: 'DELETE',
     }).catch(console.error);
 
     fetch(`/api/clinics/${id}`, {
       method: 'DELETE',
     }).catch(console.error);
 
-    // 2. Remove associated user accounts (admin / encargado)
+    // 4. Remove associated user accounts (admin / encargado)
     if (tenantToDelete.adminCredentials?.username || tenantToDelete.encargadoCredentials?.username) {
       setUserAccounts(prev =>
         prev.filter(
@@ -1853,13 +1974,31 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
       let newPaymentsCount = 0;
 
       try {
-        const [tenantsRes, paymentsRes] = await Promise.all([
+        const [tenantsRes, paymentsRes, deletedRes] = await Promise.all([
           fetch('/api/tenants').then(r => r.json()).catch(() => null),
           fetch('/api/payment-requests').then(r => r.json()).catch(() => null),
+          fetch('/api/deleted-tenants').then(r => r.json()).catch(() => null),
         ]);
 
+        const serverDeletedIds: string[] = Array.isArray(deletedRes?.deletedIds) ? deletedRes.deletedIds : [];
+        let localDeletedIds: string[] = [];
+        try {
+          const rawDel = localStorage.getItem('vet_deleted_tenants');
+          if (rawDel) localDeletedIds = JSON.parse(rawDel);
+        } catch {}
+        const allDeletedSet = new Set([
+          ...serverDeletedIds,
+          ...localDeletedIds,
+          'tenant-central-local',
+          'tenant-americas',
+          'tenant-1',
+          'tenant-2',
+          'tenant-sample-1',
+        ]);
+        localStorage.setItem('vet_deleted_tenants', JSON.stringify(Array.from(allDeletedSet)));
+
         if (tenantsRes?.success && Array.isArray(tenantsRes.tenants)) {
-          const serverTenants: TenantClinic[] = tenantsRes.tenants;
+          const serverTenants: TenantClinic[] = tenantsRes.tenants.filter(t => t && t.id && !allDeletedSet.has(t.id));
 
           // Get local storage tenants to prevent losing any locally registered clinic
           let localTenants: TenantClinic[] = [];
@@ -1870,9 +2009,11 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
 
           // Merge local and server tenants by id
           const map = new Map<string, TenantClinic>();
-          localTenants.forEach(t => { if (t && t.id) map.set(t.id, t); });
+          localTenants.forEach(t => {
+            if (t && t.id && !allDeletedSet.has(t.id)) map.set(t.id, t);
+          });
           serverTenants.forEach(t => {
-            if (t && t.id) {
+            if (t && t.id && !allDeletedSet.has(t.id)) {
               const existing = map.get(t.id) || {};
               map.set(t.id, { ...existing, ...t });
             }
