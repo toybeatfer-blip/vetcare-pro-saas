@@ -573,6 +573,7 @@ export const VeterinaryProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setIsLoginModalOpen(false);
       setActiveTab('master_tenants');
       setViewMode('admin');
+      manualPollRequestsNow();
       showToast(
         `⚡ Bienvenido Super Administrador (${accountData.name}). Panel Maestro de Arrendados y Licencias activado.`,
         'success'

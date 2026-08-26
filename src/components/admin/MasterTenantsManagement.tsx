@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ShieldAlert,
   ShieldCheck,
@@ -58,7 +58,12 @@ export const MasterTenantsManagement: React.FC = () => {
     syncLocalClinicWithTenant,
     resetTenantUserCredentials,
     generateRandomPassword,
+    manualPollRequestsNow,
   } = useVeterinary();
+
+  useEffect(() => {
+    manualPollRequestsNow();
+  }, []);
 
   const [masterSubTab, setMasterSubTab] = useState<'tenants' | 'payments'>('tenants');
   const [searchTerm, setSearchTerm] = useState('');

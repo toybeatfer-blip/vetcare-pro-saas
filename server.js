@@ -98,8 +98,20 @@ async function startServer() {
   app.post("/api/tenants/sync-all", (req, res) => {
     const { tenants } = req.body;
     if (Array.isArray(tenants)) {
-      writeJson(TENANTS_FILE, tenants);
-      return res.json({ success: true, count: tenants.length, timestamp: new Date().toISOString() });
+      const existing = readJson(TENANTS_FILE, []);
+      const currentList = Array.isArray(existing) ? existing : [];
+      // Safe merge: preserve all existing server tenants so registrations from other devices are never lost
+      const map = new Map();
+      currentList.forEach(t => { if (t && t.id) map.set(t.id, t); });
+      tenants.forEach(t => {
+        if (t && t.id) {
+          const prev = map.get(t.id) || {};
+          map.set(t.id, { ...prev, ...t });
+        }
+      });
+      const merged = Array.from(map.values());
+      writeJson(TENANTS_FILE, merged);
+      return res.json({ success: true, tenants: merged, count: merged.length, timestamp: new Date().toISOString() });
     }
     res.status(400).json({ success: false, error: "Invalid tenants payload" });
   });
@@ -125,8 +137,19 @@ async function startServer() {
   app.post("/api/payment-requests/sync-all", (req, res) => {
     const { requests } = req.body;
     if (Array.isArray(requests)) {
-      writeJson(PAYMENTS_FILE, requests);
-      return res.json({ success: true, count: requests.length, timestamp: new Date().toISOString() });
+      const existing = readJson(PAYMENTS_FILE, []);
+      const currentList = Array.isArray(existing) ? existing : [];
+      const map = new Map();
+      currentList.forEach(r => { if (r && r.id) map.set(r.id, r); });
+      requests.forEach(r => {
+        if (r && r.id) {
+          const prev = map.get(r.id) || {};
+          map.set(r.id, { ...prev, ...r });
+        }
+      });
+      const merged = Array.from(map.values());
+      writeJson(PAYMENTS_FILE, merged);
+      return res.json({ success: true, requests: merged, count: merged.length, timestamp: new Date().toISOString() });
     }
     res.status(400).json({ success: false, error: "Invalid requests payload" });
   });

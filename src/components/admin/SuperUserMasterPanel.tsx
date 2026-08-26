@@ -126,6 +126,10 @@ export const SuperUserMasterPanel: React.FC<SuperUserMasterPanelProps> = ({ onSw
     };
   }, [superUserAccount, currentUser]);
 
+  useEffect(() => {
+    manualPollRequestsNow();
+  }, []);
+
   const [superUserForm, setSuperUserForm] = useState({
     username: '',
     name: '',
