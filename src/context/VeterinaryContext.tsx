@@ -1859,19 +1859,75 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
         ]);
 
         if (tenantsRes?.success && Array.isArray(tenantsRes.tenants)) {
-          if (tenantsRes.tenants.length > tenants.length) {
-            newClinicsCount = tenantsRes.tenants.length - tenants.length;
+          const serverTenants: TenantClinic[] = tenantsRes.tenants;
+
+          // Get local storage tenants to prevent losing any locally registered clinic
+          let localTenants: TenantClinic[] = [];
+          try {
+            const raw = localStorage.getItem(LOCAL_STORAGE_KEYS.TENANTS);
+            if (raw) localTenants = JSON.parse(raw);
+          } catch {}
+
+          // Merge local and server tenants by id
+          const map = new Map<string, TenantClinic>();
+          localTenants.forEach(t => { if (t && t.id) map.set(t.id, t); });
+          serverTenants.forEach(t => {
+            if (t && t.id) {
+              const existing = map.get(t.id) || {};
+              map.set(t.id, { ...existing, ...t });
+            }
+          });
+          const mergedTenants = Array.from(map.values());
+
+          if (mergedTenants.length > tenants.length) {
+            newClinicsCount = mergedTenants.length - tenants.length;
           }
-          setTenants(tenantsRes.tenants);
-          localStorage.setItem(LOCAL_STORAGE_KEYS.TENANTS, JSON.stringify(tenantsRes.tenants));
+
+          // If local device has clinics that server is missing, auto-upload to server immediately!
+          if (mergedTenants.length > serverTenants.length) {
+            fetch('/api/tenants/sync-all', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tenants: mergedTenants }),
+            }).catch(console.error);
+          }
+
+          setTenants(mergedTenants);
+          localStorage.setItem(LOCAL_STORAGE_KEYS.TENANTS, JSON.stringify(mergedTenants));
         }
+
         if (paymentsRes?.success && Array.isArray(paymentsRes.requests)) {
-          const sanitizedRequests = paymentsRes.requests.map(normalizePaymentRequest);
-          if (sanitizedRequests.length > paymentRequests.length) {
-            newPaymentsCount = sanitizedRequests.length - paymentRequests.length;
+          const serverRequests = paymentsRes.requests.map(normalizePaymentRequest);
+          let localRequests: PaymentRenewalRequest[] = [];
+          try {
+            const raw = localStorage.getItem(LOCAL_STORAGE_KEYS.PAYMENT_REQUESTS);
+            if (raw) localRequests = JSON.parse(raw).map(normalizePaymentRequest);
+          } catch {}
+
+          const reqMap = new Map<string, PaymentRenewalRequest>();
+          localRequests.forEach(r => { if (r && r.id) reqMap.set(r.id, r); });
+          serverRequests.forEach(r => {
+            if (r && r.id) {
+              const existing = reqMap.get(r.id) || {};
+              reqMap.set(r.id, { ...existing, ...r });
+            }
+          });
+          const mergedRequests = Array.from(reqMap.values());
+
+          if (mergedRequests.length > paymentRequests.length) {
+            newPaymentsCount = mergedRequests.length - paymentRequests.length;
           }
-          setPaymentRequests(sanitizedRequests);
-          localStorage.setItem(LOCAL_STORAGE_KEYS.PAYMENT_REQUESTS, JSON.stringify(sanitizedRequests));
+
+          if (mergedRequests.length > serverRequests.length) {
+            fetch('/api/payment-requests/sync-all', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ requests: mergedRequests }),
+            }).catch(console.error);
+          }
+
+          setPaymentRequests(mergedRequests);
+          localStorage.setItem(LOCAL_STORAGE_KEYS.PAYMENT_REQUESTS, JSON.stringify(mergedRequests));
         }
       } catch {
         // Local fallback

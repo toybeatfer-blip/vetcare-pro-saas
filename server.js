@@ -128,6 +128,29 @@ async function startServer() {
     res.status(400).json({ success: false, error: "Invalid tenant registration payload" });
   });
 
+  app.put("/api/tenants/:tenantId", (req, res) => {
+    const tenantId = (req.params.tenantId || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    const updates = req.body;
+    if (tenantId && updates) {
+      const existing = readJson(TENANTS_FILE, []);
+      const currentList = Array.isArray(existing) ? existing : [];
+      let found = false;
+      const updated = currentList.map(t => {
+        if (t && t.id === tenantId) {
+          found = true;
+          return { ...t, ...updates };
+        }
+        return t;
+      });
+      if (!found && updates.id) {
+        updated.push(updates);
+      }
+      writeJson(TENANTS_FILE, updated);
+      return res.json({ success: true, count: updated.length, timestamp: new Date().toISOString() });
+    }
+    res.status(400).json({ success: false, error: "Invalid tenant update payload" });
+  });
+
   // 2. Payment Renewal Requests API
   app.get("/api/payment-requests", (_req, res) => {
     const requests = readJson(PAYMENTS_FILE, []);
