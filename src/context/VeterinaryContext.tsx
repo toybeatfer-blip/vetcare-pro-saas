@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Pet,
   MedicalRecord,
@@ -312,114 +312,96 @@ const LOCAL_STORAGE_KEYS = {
   TUTORIAL_COMPLETED: 'vetcare_tutorial_completed_v1',
 };
 
-// Auto-purification of demo and deleted data on any device
+// Safe storage purifier of demo items on bootstrap
 (() => {
   try {
-    const STORAGE_PURGE_KEY = 'vetcare_storage_clean_prod_v2';
-    if (localStorage.getItem(STORAGE_PURGE_KEY) !== 'true') {
-      const keysToClean = [
-        'vet_pets', 'vet_records', 'vet_vaccines', 'vet_appointments', 'vet_inventory',
-        'vet_movements', 'vet_tenants', 'vet_payment_requests', 'vet_products', 'vet_sales',
-        'vet_petshop_products', 'vet_petshop_sales', 'vet_medical_discharges', 'vet_cash_shifts_v1',
-        'vet_active_cash_shift_v1',
-      ];
-      keysToClean.forEach(k => {
-        try { localStorage.removeItem(k); } catch {}
-      });
+    const DEMO_TENANT_IDS = ['tenant-central-local', 'tenant-americas', 'tenant-1', 'tenant-2', 'tenant-sample-1'];
+    const DEMO_PET_IDS = ['pet-1', 'pet-2', 'pet-3', 'pet-4', 'pet-5'];
+    const DEMO_PET_NAMES = ['Max', 'Luna', 'Rocky', 'Milo'];
+    const DEMO_REC_IDS = ['rec-1', 'rec-2', 'rec-3'];
+    const DEMO_VAC_IDS = ['vac-1', 'vac-2'];
+    const DEMO_APT_IDS = ['apt-1', 'apt-2'];
+    const DEMO_MED_IDS = ['med-1', 'med-2', 'med-3'];
+    const DEMO_MOV_IDS = ['mov-1', 'mov-2'];
 
-      const DEMO_TENANT_IDS = ['tenant-central-local', 'tenant-americas', 'tenant-1', 'tenant-2', 'tenant-sample-1'];
-      const rawTenants = localStorage.getItem(LOCAL_STORAGE_KEYS.TENANTS);
-      if (rawTenants) {
-        try {
-          const parsed = JSON.parse(rawTenants);
-          if (Array.isArray(parsed)) {
-            const cleanTenants = parsed.filter(t => t && t.id && !DEMO_TENANT_IDS.includes(t.id) && t.clinicName !== 'Clínica Veterinaria Central');
-            localStorage.setItem(LOCAL_STORAGE_KEYS.TENANTS, JSON.stringify(cleanTenants));
-          }
-        } catch {}
-      }
+    const rawTenants = localStorage.getItem(LOCAL_STORAGE_KEYS.TENANTS);
+    if (rawTenants) {
+      try {
+        const parsed = JSON.parse(rawTenants);
+        if (Array.isArray(parsed)) {
+          const clean = parsed.filter(t => t && t.id && !DEMO_TENANT_IDS.includes(t.id) && t.clinicName !== 'Clínica Veterinaria Central');
+          localStorage.setItem(LOCAL_STORAGE_KEYS.TENANTS, JSON.stringify(clean));
+        }
+      } catch {}
+    }
 
-      const rawPets = localStorage.getItem(LOCAL_STORAGE_KEYS.PETS);
-      if (rawPets) {
-        try {
-          const parsed = JSON.parse(rawPets);
-          if (Array.isArray(parsed)) {
-            const cleanPets = parsed.filter(p => p && p.id && !['pet-1', 'pet-2', 'pet-3', 'pet-4', 'pet-5'].includes(p.id) && !['Max', 'Luna', 'Rocky', 'Milo'].includes(p.name));
-            localStorage.setItem(LOCAL_STORAGE_KEYS.PETS, JSON.stringify(cleanPets));
-          }
-        } catch {}
-      }
+    const rawPets = localStorage.getItem(LOCAL_STORAGE_KEYS.PETS);
+    if (rawPets) {
+      try {
+        const parsed = JSON.parse(rawPets);
+        if (Array.isArray(parsed)) {
+          const clean = parsed.filter(p => p && p.id && !DEMO_PET_IDS.includes(p.id) && !DEMO_PET_NAMES.includes(p.name));
+          localStorage.setItem(LOCAL_STORAGE_KEYS.PETS, JSON.stringify(clean));
+        }
+      } catch {}
+    }
 
-      const rawRecords = localStorage.getItem(LOCAL_STORAGE_KEYS.RECORDS);
-      if (rawRecords) {
-        try {
-          const parsed = JSON.parse(rawRecords);
-          if (Array.isArray(parsed)) {
-            const clean = parsed.filter(r => r && r.id && !r.id.startsWith('rec-'));
-            localStorage.setItem(LOCAL_STORAGE_KEYS.RECORDS, JSON.stringify(clean));
-          }
-        } catch {}
-      }
+    const rawRecords = localStorage.getItem(LOCAL_STORAGE_KEYS.RECORDS);
+    if (rawRecords) {
+      try {
+        const parsed = JSON.parse(rawRecords);
+        if (Array.isArray(parsed)) {
+          const clean = parsed.filter(r => r && r.id && !DEMO_REC_IDS.includes(r.id));
+          localStorage.setItem(LOCAL_STORAGE_KEYS.RECORDS, JSON.stringify(clean));
+        }
+      } catch {}
+    }
 
-      const rawVaccines = localStorage.getItem(LOCAL_STORAGE_KEYS.VACCINES);
-      if (rawVaccines) {
-        try {
-          const parsed = JSON.parse(rawVaccines);
-          if (Array.isArray(parsed)) {
-            const clean = parsed.filter(v => v && v.id && !v.id.startsWith('vac-'));
-            localStorage.setItem(LOCAL_STORAGE_KEYS.VACCINES, JSON.stringify(clean));
-          }
-        } catch {}
-      }
+    const rawVaccines = localStorage.getItem(LOCAL_STORAGE_KEYS.VACCINES);
+    if (rawVaccines) {
+      try {
+        const parsed = JSON.parse(rawVaccines);
+        if (Array.isArray(parsed)) {
+          const clean = parsed.filter(v => v && v.id && !DEMO_VAC_IDS.includes(v.id));
+          localStorage.setItem(LOCAL_STORAGE_KEYS.VACCINES, JSON.stringify(clean));
+        }
+      } catch {}
+    }
 
-      const rawApts = localStorage.getItem(LOCAL_STORAGE_KEYS.APPOINTMENTS);
-      if (rawApts) {
-        try {
-          const parsed = JSON.parse(rawApts);
-          if (Array.isArray(parsed)) {
-            const clean = parsed.filter(a => a && a.id && !a.id.startsWith('apt-'));
-            localStorage.setItem(LOCAL_STORAGE_KEYS.APPOINTMENTS, JSON.stringify(clean));
-          }
-        } catch {}
-      }
+    const rawApts = localStorage.getItem(LOCAL_STORAGE_KEYS.APPOINTMENTS);
+    if (rawApts) {
+      try {
+        const parsed = JSON.parse(rawApts);
+        if (Array.isArray(parsed)) {
+          const clean = parsed.filter(a => a && a.id && !DEMO_APT_IDS.includes(a.id));
+          localStorage.setItem(LOCAL_STORAGE_KEYS.APPOINTMENTS, JSON.stringify(clean));
+        }
+      } catch {}
+    }
 
-      const rawInv = localStorage.getItem(LOCAL_STORAGE_KEYS.INVENTORY);
-      if (rawInv) {
-        try {
-          const parsed = JSON.parse(rawInv);
-          if (Array.isArray(parsed)) {
-            const clean = parsed.filter(m => m && m.id && !m.id.startsWith('med-'));
-            localStorage.setItem(LOCAL_STORAGE_KEYS.INVENTORY, JSON.stringify(clean));
-          }
-        } catch {}
-      }
+    const rawInv = localStorage.getItem(LOCAL_STORAGE_KEYS.INVENTORY);
+    if (rawInv) {
+      try {
+        const parsed = JSON.parse(rawInv);
+        if (Array.isArray(parsed)) {
+          const clean = parsed.filter(m => m && m.id && !DEMO_MED_IDS.includes(m.id));
+          localStorage.setItem(LOCAL_STORAGE_KEYS.INVENTORY, JSON.stringify(clean));
+        }
+      } catch {}
+    }
 
-      const rawMov = localStorage.getItem(LOCAL_STORAGE_KEYS.MOVEMENTS);
-      if (rawMov) {
-        try {
-          const parsed = JSON.parse(rawMov);
-          if (Array.isArray(parsed)) {
-            const clean = parsed.filter(m => m && m.id && !m.id.startsWith('mov-'));
-            localStorage.setItem(LOCAL_STORAGE_KEYS.MOVEMENTS, JSON.stringify(clean));
-          }
-        } catch {}
-      }
-
-      const rawPayments = localStorage.getItem(LOCAL_STORAGE_KEYS.PAYMENT_REQUESTS);
-      if (rawPayments) {
-        try {
-          const parsed = JSON.parse(rawPayments);
-          if (Array.isArray(parsed)) {
-            const clean = parsed.filter(p => p && p.id !== 'req-sample-1');
-            localStorage.setItem(LOCAL_STORAGE_KEYS.PAYMENT_REQUESTS, JSON.stringify(clean));
-          }
-        } catch {}
-      }
-
-      localStorage.setItem(STORAGE_PURGE_KEY, 'true');
+    const rawMov = localStorage.getItem(LOCAL_STORAGE_KEYS.MOVEMENTS);
+    if (rawMov) {
+      try {
+        const parsed = JSON.parse(rawMov);
+        if (Array.isArray(parsed)) {
+          const clean = parsed.filter(m => m && m.id && !DEMO_MOV_IDS.includes(m.id));
+          localStorage.setItem(LOCAL_STORAGE_KEYS.MOVEMENTS, JSON.stringify(clean));
+        }
+      } catch {}
     }
   } catch (e) {
-    console.error('Storage purge error:', e);
+    console.error('Storage cleaner error:', e);
   }
 })();
 
@@ -1925,8 +1907,14 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
           medicalRecords,
           vaccines,
           appointments,
+          reminders,
           inventory,
           stockMovements,
+          discharges,
+          products,
+          salesReceipts,
+          cashShifts,
+          activeShift,
           clinicSettings,
           systemLicense,
           updatedAt: new Date().toISOString(),
@@ -1949,24 +1937,46 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
         return false;
       }
 
-      // 3. Load target clinic partition
-      const savedPartitionStr = localStorage.getItem(`vetcare_db_${targetTenantId}`);
-      if (savedPartitionStr) {
-        try {
-          const partition = JSON.parse(savedPartitionStr);
-          setPets(partition.pets || []);
-          setMedicalRecords(partition.medicalRecords || []);
-          setVaccines(partition.vaccines || []);
-          setAppointments(partition.appointments || []);
-          setInventory(partition.inventory || []);
-          setStockMovements(partition.stockMovements || []);
-          if (partition.clinicSettings) setClinicSettings(partition.clinicSettings);
-          if (partition.systemLicense) setSystemLicense(partition.systemLicense);
-        } catch {
-          // fallback
+      // 3. Load target clinic partition directly from Render Cloud Server
+      let cloudData: any = null;
+      try {
+        const cloudRes = await fetch(`/api/clinics/${targetTenantId}/data`).then(r => r.json()).catch(() => null);
+        if (cloudRes?.success && cloudRes.data && typeof cloudRes.data === 'object') {
+          cloudData = cloudRes.data;
         }
+      } catch {}
+
+      if (cloudData) {
+        setPets(cloudData.pets || []);
+        setMedicalRecords(cloudData.medicalRecords || []);
+        setVaccines(cloudData.vaccines || []);
+        setAppointments(cloudData.appointments || []);
+        setReminders(cloudData.reminders || []);
+        setInventory(cloudData.inventory || []);
+        setStockMovements(cloudData.stockMovements || []);
+        setDischarges(cloudData.discharges || []);
+        setProducts(cloudData.products || []);
+        setSalesReceipts(cloudData.salesReceipts || []);
+        setCashShifts(cloudData.cashShifts || []);
+        setActiveShift(cloudData.activeShift ?? null);
+        if (cloudData.clinicSettings) setClinicSettings(cloudData.clinicSettings);
+        if (cloudData.systemLicense) setSystemLicense(cloudData.systemLicense);
+
+        localStorage.setItem(`vetcare_db_${targetTenantId}`, JSON.stringify(cloudData));
+        localStorage.setItem(LOCAL_STORAGE_KEYS.PETS, JSON.stringify(cloudData.pets || []));
+        localStorage.setItem(LOCAL_STORAGE_KEYS.RECORDS, JSON.stringify(cloudData.medicalRecords || []));
+        localStorage.setItem(LOCAL_STORAGE_KEYS.VACCINES, JSON.stringify(cloudData.vaccines || []));
+        localStorage.setItem(LOCAL_STORAGE_KEYS.APPOINTMENTS, JSON.stringify(cloudData.appointments || []));
+        localStorage.setItem(LOCAL_STORAGE_KEYS.INVENTORY, JSON.stringify(cloudData.inventory || []));
+        localStorage.setItem(LOCAL_STORAGE_KEYS.MOVEMENTS, JSON.stringify(cloudData.stockMovements || []));
+        localStorage.setItem('vet_medical_discharges', JSON.stringify(cloudData.discharges || []));
+        localStorage.setItem('vet_petshop_products', JSON.stringify(cloudData.products || []));
+        localStorage.setItem('vet_petshop_sales', JSON.stringify(cloudData.salesReceipts || []));
+        localStorage.setItem('vet_cash_shifts_v1', JSON.stringify(cloudData.cashShifts || []));
+        if (cloudData.clinicSettings) localStorage.setItem(LOCAL_STORAGE_KEYS.SETTINGS, JSON.stringify(cloudData.clinicSettings));
+        if (cloudData.systemLicense) localStorage.setItem(LOCAL_STORAGE_KEYS.SYSTEM_LICENSE, JSON.stringify(cloudData.systemLicense));
       } else {
-        // First time loading this tenant: initialize clean isolated database partition for this clinic
+        // Fallback: initialize clean isolated database partition for this clinic
         const isCentral = targetTenantId === 'tenant-central-local' || targetTenant.clinicName.toLowerCase().includes('central');
         const defaultPets = isCentral ? INITIAL_PETS : [];
         const defaultRecords = isCentral ? INITIAL_MEDICAL_RECORDS : [];
@@ -2011,7 +2021,6 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
         };
         setSystemLicense(newLic);
 
-        // Save new clean partition
         const initPartition = {
           pets: defaultPets,
           medicalRecords: defaultRecords,
@@ -2024,11 +2033,18 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
           updatedAt: new Date().toISOString(),
         };
         localStorage.setItem(`vetcare_db_${targetTenantId}`, JSON.stringify(initPartition));
+
+        // Create initial file on cloud
+        fetch(`/api/clinics/${targetTenantId}/data`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: initPartition }),
+        }).catch(() => {});
       }
 
       setActiveTenantId(targetTenantId);
       localStorage.setItem('vetcare_active_tenant_id', targetTenantId);
-      showToast(`📦 Partición de base de datos cargada para: "${targetTenant.clinicName}".`, 'success');
+      showToast(`📦 Base de datos en la nube cargada para: "${targetTenant.clinicName}".`, 'success');
       return true;
     } catch (e) {
       console.error('Error switching tenant database:', e);
@@ -2040,22 +2056,157 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
     try {
       const now = new Date();
       setLastPollTime(now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-      setAutoPollCountdown(15);
+      setAutoPollCountdown(8);
 
       let newClinicsCount = 0;
       let newPaymentsCount = 0;
 
       try {
-        const [tenantsRes, paymentsRes, deletedRes, billingRes] = await Promise.all([
+        const currentTargetId = activeTenantId || 'default';
+        const [tenantsRes, paymentsRes, deletedRes, billingRes, clinicRes] = await Promise.all([
           fetch('/api/tenants').then(r => r.json()).catch(() => null),
           fetch('/api/payment-requests').then(r => r.json()).catch(() => null),
           fetch('/api/deleted-tenants').then(r => r.json()).catch(() => null),
           fetch('/api/master-billing').then(r => r.json()).catch(() => null),
+          fetch(`/api/clinics/${currentTargetId}/data`).then(r => r.json()).catch(() => null),
         ]);
 
         if (billingRes?.success && billingRes.settings && typeof billingRes.settings === 'object') {
           setMasterBillingSettings(prev => ({ ...prev, ...billingRes.settings }));
           localStorage.setItem(LOCAL_STORAGE_KEYS.MASTER_BILLING, JSON.stringify(billingRes.settings));
+        }
+
+        // Real-Time Synchronize Active Clinic Data from Cloud Server
+        if (clinicRes?.success && clinicRes.data && typeof clinicRes.data === 'object') {
+          const cData = clinicRes.data;
+
+          if (Array.isArray(cData.pets)) {
+            setPets(prev => {
+              const map = new Map<string, Pet>();
+              prev.forEach(p => { if (p && p.id) map.set(p.id, p); });
+              cData.pets.forEach((p: Pet) => {
+                if (p && p.id) {
+                  const existing = map.get(p.id) || {};
+                  map.set(p.id, { ...existing, ...p });
+                }
+              });
+              const merged = Array.from(map.values());
+              localStorage.setItem(LOCAL_STORAGE_KEYS.PETS, JSON.stringify(merged));
+              return merged;
+            });
+          }
+
+          if (Array.isArray(cData.medicalRecords)) {
+            setMedicalRecords(prev => {
+              const map = new Map<string, MedicalRecord>();
+              prev.forEach(r => { if (r && r.id) map.set(r.id, r); });
+              cData.medicalRecords.forEach((r: MedicalRecord) => {
+                if (r && r.id) {
+                  const existing = map.get(r.id) || {};
+                  map.set(r.id, { ...existing, ...r });
+                }
+              });
+              const merged = Array.from(map.values());
+              localStorage.setItem(LOCAL_STORAGE_KEYS.RECORDS, JSON.stringify(merged));
+              return merged;
+            });
+          }
+
+          if (Array.isArray(cData.vaccines)) {
+            setVaccines(prev => {
+              const map = new Map<string, VaccineRecord>();
+              prev.forEach(v => { if (v && v.id) map.set(v.id, v); });
+              cData.vaccines.forEach((v: VaccineRecord) => {
+                if (v && v.id) {
+                  const existing = map.get(v.id) || {};
+                  map.set(v.id, { ...existing, ...v });
+                }
+              });
+              const merged = Array.from(map.values());
+              localStorage.setItem(LOCAL_STORAGE_KEYS.VACCINES, JSON.stringify(merged));
+              return merged;
+            });
+          }
+
+          if (Array.isArray(cData.appointments)) {
+            setAppointments(prev => {
+              const map = new Map<string, Appointment>();
+              prev.forEach(a => { if (a && a.id) map.set(a.id, a); });
+              cData.appointments.forEach((a: Appointment) => {
+                if (a && a.id) {
+                  const existing = map.get(a.id) || {};
+                  map.set(a.id, { ...existing, ...a });
+                }
+              });
+              const merged = Array.from(map.values());
+              localStorage.setItem(LOCAL_STORAGE_KEYS.APPOINTMENTS, JSON.stringify(merged));
+              return merged;
+            });
+          }
+
+          if (Array.isArray(cData.inventory)) {
+            setInventory(prev => {
+              const map = new Map<string, MedicationItem>();
+              prev.forEach(m => { if (m && m.id) map.set(m.id, m); });
+              cData.inventory.forEach((m: MedicationItem) => {
+                if (m && m.id) {
+                  const existing = map.get(m.id) || {};
+                  map.set(m.id, { ...existing, ...m });
+                }
+              });
+              const merged = Array.from(map.values());
+              localStorage.setItem(LOCAL_STORAGE_KEYS.INVENTORY, JSON.stringify(merged));
+              return merged;
+            });
+          }
+
+          if (Array.isArray(cData.products)) {
+            setProducts(prev => {
+              const map = new Map<string, PetShopProduct>();
+              prev.forEach(p => { if (p && p.id) map.set(p.id, p); });
+              cData.products.forEach((p: PetShopProduct) => {
+                if (p && p.id) {
+                  const existing = map.get(p.id) || {};
+                  map.set(p.id, { ...existing, ...p });
+                }
+              });
+              const merged = Array.from(map.values());
+              localStorage.setItem('vet_petshop_products', JSON.stringify(merged));
+              return merged;
+            });
+          }
+
+          if (Array.isArray(cData.salesReceipts)) {
+            setSalesReceipts(prev => {
+              const map = new Map<string, PetShopSaleReceipt>();
+              prev.forEach(s => { if (s && s.id) map.set(s.id, s); });
+              cData.salesReceipts.forEach((s: PetShopSaleReceipt) => {
+                if (s && s.id) {
+                  const existing = map.get(s.id) || {};
+                  map.set(s.id, { ...existing, ...s });
+                }
+              });
+              const merged = Array.from(map.values());
+              localStorage.setItem('vet_petshop_sales', JSON.stringify(merged));
+              return merged;
+            });
+          }
+
+          if (Array.isArray(cData.cashShifts)) {
+            setCashShifts(prev => {
+              const map = new Map<string, CashRegisterShift>();
+              prev.forEach(s => { if (s && s.id) map.set(s.id, s); });
+              cData.cashShifts.forEach((s: CashRegisterShift) => {
+                if (s && s.id) {
+                  const existing = map.get(s.id) || {};
+                  map.set(s.id, { ...existing, ...s });
+                }
+              });
+              const merged = Array.from(map.values());
+              localStorage.setItem('vet_cash_shifts_v1', JSON.stringify(merged));
+              return merged;
+            });
+          }
         }
 
         const serverDeletedIds: string[] = Array.isArray(deletedRes?.deletedIds) ? deletedRes.deletedIds : [];
@@ -2184,20 +2335,20 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
     };
   }, []);
 
-  // Background 15-second Real-Time Auto-poll loop & countdown ticker
+  // Background 6-second Real-Time Auto-poll loop & countdown ticker
   useEffect(() => {
     const timer = setInterval(() => {
       setAutoPollCountdown(prev => {
         if (prev <= 1) {
           manualPollRequestsNow();
-          return 15;
+          return 8;
         }
         return prev - 1;
       });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [tenants.length, paymentRequests.length]);
+  }, [activeTenantId, tenants.length, paymentRequests.length]);
 
   const syncLocalClinicWithTenant = (tenantId: string) => {
     switchTenantDatabase(tenantId);
@@ -2505,6 +2656,85 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
     localStorage.setItem(LOCAL_STORAGE_KEYS.SETTINGS, JSON.stringify(clinicSettings));
   }, [clinicSettings]);
 
+  // Unified Real-Time Cloud Synchronization Engine
+  const syncClinicToCloud = useCallback(async (customPayload?: Record<string, any>, replaceArrays: boolean = false) => {
+    try {
+      const currentTargetId = activeTenantId || 'default';
+      const payloadData = {
+        pets,
+        medicalRecords,
+        vaccines,
+        appointments,
+        reminders,
+        inventory,
+        stockMovements,
+        discharges,
+        products,
+        salesReceipts,
+        cashShifts,
+        activeShift,
+        clinicSettings,
+        systemLicense,
+        updatedAt: new Date().toISOString(),
+        ...(customPayload || {}),
+      };
+
+      // Save to active clinic partition in localStorage
+      localStorage.setItem(`vetcare_db_${currentTargetId}`, JSON.stringify(payloadData));
+
+      // Push to Render cloud server
+      const res = await fetch(`/api/clinics/${currentTargetId}/data`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: payloadData, merge: !replaceArrays }),
+      });
+      return await res.json();
+    } catch (e) {
+      console.warn('Cloud auto-sync background warning:', e);
+      return null;
+    }
+  }, [
+    activeTenantId,
+    pets,
+    medicalRecords,
+    vaccines,
+    appointments,
+    reminders,
+    inventory,
+    stockMovements,
+    discharges,
+    products,
+    salesReceipts,
+    cashShifts,
+    activeShift,
+    clinicSettings,
+    systemLicense,
+  ]);
+
+  // Debounced auto-push to Render cloud when local state changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      syncClinicToCloud();
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [
+    pets,
+    medicalRecords,
+    vaccines,
+    appointments,
+    reminders,
+    inventory,
+    stockMovements,
+    discharges,
+    products,
+    salesReceipts,
+    cashShifts,
+    activeShift,
+    clinicSettings,
+    systemLicense,
+    syncClinicToCloud,
+  ]);
+
   const updateClinicSettings = (newSettings: Partial<ClinicSettings>) => {
     if (currentUser?.role === 'encargado') {
       showToast('Acceso denegado: El perfil de Encargado no puede modificar los parámetros de la clínica.', 'error');
@@ -2561,11 +2791,26 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
     const petToDelete = pets.find(p => p.id === id);
     if (!petToDelete) return false;
 
-    setPets(prev => prev.filter(p => p.id !== id));
-    setMedicalRecords(prev => prev.filter(r => r.petId !== id));
-    setVaccines(prev => prev.filter(v => v.petId !== id));
-    setAppointments(prev => prev.filter(a => a.petId !== id));
-    setReminders(prev => prev.filter(r => r.petId !== id));
+    const updatedPets = pets.filter(p => p.id !== id);
+    const updatedRecords = medicalRecords.filter(r => r.petId !== id);
+    const updatedVaccines = vaccines.filter(v => v.petId !== id);
+    const updatedAppts = appointments.filter(a => a.petId !== id);
+    const updatedReminders = reminders.filter(r => r.petId !== id);
+
+    setPets(updatedPets);
+    setMedicalRecords(updatedRecords);
+    setVaccines(updatedVaccines);
+    setAppointments(updatedAppts);
+    setReminders(updatedReminders);
+
+    syncClinicToCloud({
+      pets: updatedPets,
+      medicalRecords: updatedRecords,
+      vaccines: updatedVaccines,
+      appointments: updatedAppts,
+      reminders: updatedReminders,
+    }, true);
+
     showToast(`Paciente "${petToDelete.name}" y su tutor "${petToDelete.owner?.name || ''}" han sido eliminados por completo del sistema.`, 'info');
     return true;
   };
@@ -2656,7 +2901,9 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
   };
 
   const deleteAppointment = (id: string) => {
-    setAppointments(prev => prev.filter(a => a.id !== id));
+    const updatedAppts = appointments.filter(a => a.id !== id);
+    setAppointments(updatedAppts);
+    syncClinicToCloud({ appointments: updatedAppts }, true);
     showToast(`Cita cancelada y retirada de la agenda.`, 'info');
   };
 
@@ -2732,7 +2979,9 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
   };
 
   const deleteVaccineRecord = (id: string) => {
-    setVaccines(prev => prev.filter(v => v.id !== id));
+    const updatedVaccines = vaccines.filter(v => v.id !== id);
+    setVaccines(updatedVaccines);
+    syncClinicToCloud({ vaccines: updatedVaccines }, true);
     showToast(`Registro de vacuna eliminado.`, 'info');
   };
 
@@ -2779,8 +3028,11 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
 
   const deleteMedication = (id: string) => {
     const item = inventory.find(m => m.id === id);
-    setInventory(prev => prev.filter(m => m.id !== id));
-    setStockMovements(prev => prev.filter(mov => mov.medicationId !== id));
+    const updatedInv = inventory.filter(m => m.id !== id);
+    const updatedMov = stockMovements.filter(mov => mov.medicationId !== id);
+    setInventory(updatedInv);
+    setStockMovements(updatedMov);
+    syncClinicToCloud({ inventory: updatedInv, stockMovements: updatedMov }, true);
     showToast(`Medicamento "${item?.name || ''}" eliminado del inventario.`, 'info');
   };
 
@@ -2852,7 +3104,9 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
 
   const deleteProduct = (id: string) => {
     const target = products.find(p => p.id === id);
-    setProducts(prev => prev.filter(p => p.id !== id));
+    const updatedProducts = products.filter(p => p.id !== id);
+    setProducts(updatedProducts);
+    syncClinicToCloud({ products: updatedProducts }, true);
     showToast(`Producto "${target?.name || ''}" eliminado del catálogo.`, 'info');
   };
 

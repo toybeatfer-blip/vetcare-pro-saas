@@ -212,22 +212,95 @@ async function startServer() {
     res.status(400).json({ success: false, error: "Invalid payment request payload" });
   });
 
-  // 3. Isolated Clinic Database Partition API
+  // 3. Centralized Multi-Device Clinic Database API
   app.get("/api/clinics/:clinicId/data", (req, res) => {
-    const clinicId = (req.params.clinicId || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    const rawId = req.params.clinicId || "default";
+    const clinicId = rawId.replace(/[^a-zA-Z0-9_-]/g, "") || "default";
     const clinicFile = path.join(CLINICS_DIR, `${clinicId}.json`);
     const data = readJson(clinicFile, null);
     res.json({ success: true, clinicId, data });
   });
 
   app.post("/api/clinics/:clinicId/data", (req, res) => {
-    const clinicId = (req.params.clinicId || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    const rawId = req.params.clinicId || "default";
+    const clinicId = rawId.replace(/[^a-zA-Z0-9_-]/g, "") || "default";
     const clinicFile = path.join(CLINICS_DIR, `${clinicId}.json`);
     const payload = req.body.data || req.body.clinicData || req.body;
-    if (payload && (payload.pets || payload.clinicSettings || req.body.data || req.body.clinicData)) {
-      const dataToSave = req.body.data || req.body.clinicData || payload;
-      writeJson(clinicFile, dataToSave);
-      return res.json({ success: true, clinicId, message: "Base de datos de clínica guardada de forma aislada", timestamp: new Date().toISOString() });
+
+    if (payload && typeof payload === "object") {
+      const existing = readJson(clinicFile, {});
+      const now = new Date().toISOString();
+
+      // Intelligent array merge helper by 'id'
+      const mergeArrayById = (existingArr, incomingArr) => {
+        const eList = Array.isArray(existingArr) ? existingArr : [];
+        const iList = Array.isArray(incomingArr) ? incomingArr : [];
+        const map = new Map();
+        eList.forEach(item => { if (item && item.id) map.set(item.id, item); });
+        iList.forEach(item => {
+          if (item && item.id) {
+            const prev = map.get(item.id) || {};
+            map.set(item.id, { ...prev, ...item });
+          }
+        });
+        return Array.from(map.values());
+      };
+
+      // Array replacement if incoming was an explicit deletion/filtering (indicated by replaceArrays flag or when incoming is explicitly provided)
+      const shouldMerge = req.body.merge !== false;
+
+      const mergedData = {
+        pets: shouldMerge && payload.pets ? mergeArrayById(existing?.pets, payload.pets) : (payload.pets ?? existing?.pets ?? []),
+        medicalRecords: shouldMerge && payload.medicalRecords ? mergeArrayById(existing?.medicalRecords, payload.medicalRecords) : (payload.medicalRecords ?? existing?.medicalRecords ?? []),
+        vaccines: shouldMerge && payload.vaccines ? mergeArrayById(existing?.vaccines, payload.vaccines) : (payload.vaccines ?? existing?.vaccines ?? []),
+        appointments: shouldMerge && payload.appointments ? mergeArrayById(existing?.appointments, payload.appointments) : (payload.appointments ?? existing?.appointments ?? []),
+        reminders: shouldMerge && payload.reminders ? mergeArrayById(existing?.reminders, payload.reminders) : (payload.reminders ?? existing?.reminders ?? []),
+        inventory: shouldMerge && payload.inventory ? mergeArrayById(existing?.inventory, payload.inventory) : (payload.inventory ?? existing?.inventory ?? []),
+        stockMovements: shouldMerge && payload.stockMovements ? mergeArrayById(existing?.stockMovements, payload.stockMovements) : (payload.stockMovements ?? existing?.stockMovements ?? []),
+        discharges: shouldMerge && payload.discharges ? mergeArrayById(existing?.discharges, payload.discharges) : (payload.discharges ?? existing?.discharges ?? []),
+        products: shouldMerge && payload.products ? mergeArrayById(existing?.products, payload.products) : (payload.products ?? existing?.products ?? []),
+        salesReceipts: shouldMerge && payload.salesReceipts ? mergeArrayById(existing?.salesReceipts, payload.salesReceipts) : (payload.salesReceipts ?? existing?.salesReceipts ?? []),
+        cashShifts: shouldMerge && payload.cashShifts ? mergeArrayById(existing?.cashShifts, payload.cashShifts) : (payload.cashShifts ?? existing?.cashShifts ?? []),
+        activeShift: payload.activeShift !== undefined ? payload.activeShift : existing?.activeShift ?? null,
+        clinicSettings: { ...(existing?.clinicSettings || {}), ...(payload.clinicSettings || {}) },
+        systemLicense: { ...(existing?.systemLicense || {}), ...(payload.systemLicense || {}) },
+        updatedAt: now,
+      };
+
+      writeJson(clinicFile, mergedData);
+
+      // Auto-update tenant clinic patientsCount in tenants.json
+      if (clinicId && clinicId !== "default") {
+        const tenantsList = readJson(TENANTS_FILE, []);
+        if (Array.isArray(tenantsList)) {
+          let tenantFound = false;
+          const updatedTenants = tenantsList.map(t => {
+            if (t && t.id === clinicId) {
+              tenantFound = true;
+              return {
+                ...t,
+                patientsCount: mergedData.pets.length,
+                clinicName: mergedData.clinicSettings?.name || t.clinicName,
+                directorName: mergedData.clinicSettings?.directorName || t.directorName,
+                phone: mergedData.clinicSettings?.phone || t.phone,
+                email: mergedData.clinicSettings?.email || t.email,
+              };
+            }
+            return t;
+          });
+          if (tenantFound) {
+            writeJson(TENANTS_FILE, updatedTenants);
+          }
+        }
+      }
+
+      return res.json({
+        success: true,
+        clinicId,
+        message: "Base de datos sincronizada y guardada centralizadamente en Render",
+        data: mergedData,
+        timestamp: now,
+      });
     }
     res.status(400).json({ success: false, error: "Invalid clinic data payload" });
   });
