@@ -41,6 +41,12 @@ import {
   isSimulatedOfflineMode,
 } from '../services/networkTimeService';
 import {
+  initVetCareCloudSync,
+  triggerCloudPush,
+  sanitizeBillingContact,
+  OFFICIAL_SUPERUSER,
+} from '../services/cloudSync';
+import {
   INITIAL_PETS,
   INITIAL_MEDICAL_RECORDS,
   INITIAL_VACCINES,
@@ -1229,12 +1235,12 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
     const saved = localStorage.getItem(LOCAL_STORAGE_KEYS.MASTER_BILLING);
     if (saved) {
       try {
-        return { ...INITIAL_MASTER_BILLING_SETTINGS, ...JSON.parse(saved) };
+        return sanitizeBillingContact({ ...INITIAL_MASTER_BILLING_SETTINGS, ...JSON.parse(saved) });
       } catch {
         // ignore error
       }
     }
-    return INITIAL_MASTER_BILLING_SETTINGS;
+    return sanitizeBillingContact(INITIAL_MASTER_BILLING_SETTINGS);
   });
 
   useEffect(() => {
@@ -1243,11 +1249,11 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
 
   const updateMasterBillingSettings = (newSettings: Partial<MasterBillingSettings>) => {
     setMasterBillingSettings(prev => {
-      const updated = {
+      const updated = sanitizeBillingContact({
         ...prev,
         ...newSettings,
         updatedAt: new Date().toISOString().split('T')[0],
-      };
+      });
       localStorage.setItem(LOCAL_STORAGE_KEYS.MASTER_BILLING, JSON.stringify(updated));
 
       // Push to backend API
@@ -1256,6 +1262,9 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ settings: updated }),
       }).catch(console.error);
+
+      // Trigger cloud push to both Render and GitHub Vault 24/7
+      triggerCloudPush();
 
       return updated;
     });
@@ -1897,6 +1906,60 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
     new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   );
   const [newRegistrationBadge, setNewRegistrationBadge] = useState<number>(0);
+
+  // Universal Multi-Device Cloud Sync Listener & Background Sync
+  useEffect(() => {
+    const cleanup = initVetCareCloudSync();
+
+    const handleCloudSync = (e: any) => {
+      const state = e.detail;
+      if (!state) return;
+
+      if (Array.isArray(state.tenants)) {
+        setTenants(state.tenants);
+      }
+      if (Array.isArray(state.paymentRequests)) {
+        setPaymentRequests(state.paymentRequests.map(normalizePaymentRequest));
+      }
+      if (state.masterBilling) {
+        setMasterBillingSettings(sanitizeBillingContact(state.masterBilling));
+      }
+      if (state.superUserAccount) {
+        setSuperUserAccount((prev: any) => ({
+          ...prev,
+          ...state.superUserAccount,
+          name: OFFICIAL_SUPERUSER.name,
+          email: OFFICIAL_SUPERUSER.email,
+        }));
+      }
+
+      // If active clinic data was updated remotely
+      const currentTargetId = activeTenantId || 'default';
+      const remoteClinic = state.clinicsData?.[currentTargetId];
+      if (remoteClinic) {
+        if (Array.isArray(remoteClinic.pets)) setPets(remoteClinic.pets);
+        if (Array.isArray(remoteClinic.medicalRecords)) setMedicalRecords(remoteClinic.medicalRecords);
+        if (Array.isArray(remoteClinic.vaccines)) setVaccines(remoteClinic.vaccines);
+        if (Array.isArray(remoteClinic.appointments)) setAppointments(remoteClinic.appointments);
+        if (Array.isArray(remoteClinic.reminders)) setReminders(remoteClinic.reminders);
+        if (Array.isArray(remoteClinic.inventory)) setInventory(remoteClinic.inventory);
+        if (Array.isArray(remoteClinic.stockMovements)) setStockMovements(remoteClinic.stockMovements);
+        if (Array.isArray(remoteClinic.discharges)) setDischarges(remoteClinic.discharges);
+        if (Array.isArray(remoteClinic.products)) setProducts(remoteClinic.products);
+        if (Array.isArray(remoteClinic.salesReceipts)) setSalesReceipts(remoteClinic.salesReceipts);
+        if (Array.isArray(remoteClinic.cashShifts)) setCashShifts(remoteClinic.cashShifts);
+        if (remoteClinic.activeShift !== undefined) setActiveShift(remoteClinic.activeShift);
+        if (remoteClinic.clinicSettings) setClinicSettings((prev: any) => ({ ...prev, ...remoteClinic.clinicSettings }));
+        if (remoteClinic.systemLicense) setSystemLicense((prev: any) => ({ ...prev, ...remoteClinic.systemLicense }));
+      }
+    };
+
+    window.addEventListener('vetcare-cloud-synced', handleCloudSync);
+    return () => {
+      cleanup();
+      window.removeEventListener('vetcare-cloud-synced', handleCloudSync);
+    };
+  }, [activeTenantId]);
 
   const switchTenantDatabase = async (targetTenantId: string): Promise<boolean> => {
     try {
@@ -3645,6 +3708,7 @@ const normalizePaymentRequest = (r: any): PaymentRenewalRequest => {
             body: JSON.stringify({ tenants }),
           }),
         ]);
+        triggerCloudPush();
         audit.status = 'synced_cloud';
         setLastSessionAudit({ ...audit, status: 'synced_cloud' });
         localStorage.setItem('vetcare_last_session_audit', JSON.stringify({ ...audit, status: 'synced_cloud' }));
