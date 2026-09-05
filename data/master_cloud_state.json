@@ -1,0 +1,27 @@
+{
+  "tenants": [],
+  "deletedTenants": [],
+  "paymentRequests": [],
+  "masterBilling": {
+    "bankName": "BBVA México",
+    "clabe": "012180001234567890",
+    "accountHolder": "VetCare Pro SaaS (Fernando)",
+    "oxxoReference": "4152 3138 9012 3456",
+    "ownerEmail": "toybeatfer@gmail.com",
+    "supportPhone": "+52 474 1539891",
+    "monthlyPrice": 599,
+    "annualPrice": 5990,
+    "currency": "MXN",
+    "instructionsNotes": "Realiza tu transferencia SPEI con tu número de folio como concepto de pago. Tu activación se completará en menos de 24 horas.",
+    "updatedAt": "2026-09-05T00:07:26.959Z"
+  },
+  "superUserAccount": {
+    "username": "Fernando01",
+    "name": "Fernando (Super Admin Master)",
+    "phone": "+52 474 1539891",
+    "email": "toybeatfer@gmail.com",
+    "isSuperUser": true
+  },
+  "clinicsData": {},
+  "lastUpdated": "2026-09-05T00:07:26.962Z"
+}
