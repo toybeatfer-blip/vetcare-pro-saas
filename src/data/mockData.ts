@@ -113,13 +113,13 @@ export const INITIAL_MASTER_BILLING_SETTINGS: MasterBillingSettings = {
   clabe: '012180001234567890',
   accountHolder: 'VetCare Pro SaaS (Fernando)',
   oxxoReference: '4152 3138 9012 3456',
-  ownerEmail: 'super.admin@vetcare.master.com',
-  supportPhone: '+52 81 8300 0000',
+  ownerEmail: 'toybeatfer@gmail.com',
+  supportPhone: '+52 474 1539891',
   monthlyPrice: 599,
   annualPrice: 5990,
   currency: 'MXN',
   instructionsNotes: 'Realiza tu transferencia SPEI con tu número de folio como concepto de pago. Tu activación se completará en menos de 24 horas.',
-  updatedAt: '2026-08-25',
+  updatedAt: '2026-09-04',
 };
 
 export const INITIAL_PETSHOP_PRODUCTS: PetShopProduct[] = [];
