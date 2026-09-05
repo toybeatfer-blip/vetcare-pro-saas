@@ -91,6 +91,202 @@ async function startServer() {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
+  // =========================================================================
+  // UNIVERSAL DUAL-CHANNEL CLOUD SYNC & ANTI-DEFAULT SHIELD
+  // =========================================================================
+  const MASTER_CLOUD_STATE_FILE = path.join(DATA_DIR, "master_cloud_state.json");
+  const DEFAULT_PHONES_BLACKLIST = [
+    '+52 81 8300 0000', '81 8300 0000', '55 1234 5678', '+52 1 55 1234 5678', '+52 55 1234 5678', '1234 5678', '0000 0000'
+  ];
+  const DEFAULT_EMAILS_BLACKLIST = [
+    'super.admin@vetcare.master.com', 'admin@vetcare.master.com', 'admin@clinica.com', 'licencias@imagis-pacs.cloud'
+  ];
+
+  const sanitizeBillingContact = (billing) => {
+    const res = { ...(billing || {}) };
+    const phone = String(res.supportPhone || '').trim();
+    const email = String(res.ownerEmail || '').trim().toLowerCase();
+    if (!phone || DEFAULT_PHONES_BLACKLIST.some(d => phone.includes(d))) {
+      res.supportPhone = '+52 474 1539891';
+    }
+    if (!email || DEFAULT_EMAILS_BLACKLIST.some(d => email.includes(d))) {
+      res.ownerEmail = 'toybeatfer@gmail.com';
+    }
+    return res;
+  };
+
+  const buildCurrentMasterState = () => {
+    const rawMaster = readJson(MASTER_CLOUD_STATE_FILE, null);
+    if (rawMaster && rawMaster.tenants) {
+      rawMaster.masterBilling = sanitizeBillingContact(rawMaster.masterBilling);
+      return rawMaster;
+    }
+
+    const tenants = readJson(TENANTS_FILE, []);
+    const deletedTenants = readJson(DELETED_TENANTS_FILE, []);
+    const paymentRequests = readJson(PAYMENTS_FILE, []);
+    const masterBilling = sanitizeBillingContact(readJson(MASTER_BILLING_FILE, null));
+    const superUserAccount = readJson(SUPERUSER_FILE, {
+      username: "Fernando01",
+      name: "Fernando (Super Admin Master)",
+      isSuperUser: true,
+      email: "toybeatfer@gmail.com",
+    });
+
+    const clinicsData = {};
+    if (fs.existsSync(CLINICS_DIR)) {
+      const files = fs.readdirSync(CLINICS_DIR);
+      for (const f of files) {
+        if (f.endsWith(".json")) {
+          const cId = f.replace(".json", "");
+          clinicsData[cId] = readJson(path.join(CLINICS_DIR, f), {});
+        }
+      }
+    }
+
+    const state = {
+      tenants: Array.isArray(tenants) ? tenants : [],
+      deletedTenants: Array.isArray(deletedTenants) ? deletedTenants : [],
+      paymentRequests: Array.isArray(paymentRequests) ? paymentRequests : [],
+      masterBilling,
+      superUserAccount,
+      clinicsData,
+      lastUpdated: new Date().toISOString(),
+    };
+    writeJson(MASTER_CLOUD_STATE_FILE, state);
+    return state;
+  };
+
+  app.get("/api/sync", (_req, res) => {
+    const state = buildCurrentMasterState();
+    res.json({ success: true, state, timestamp: new Date().toISOString() });
+  });
+
+  app.post("/api/sync", (req, res) => {
+    try {
+      const incomingState = req.body.state || req.body;
+      if (!incomingState || typeof incomingState !== 'object') {
+        return res.status(400).json({ success: false, error: "Invalid sync state payload" });
+      }
+
+      const currentState = buildCurrentMasterState();
+      
+      const deletedSet = new Set([...(currentState.deletedTenants || []), ...(incomingState.deletedTenants || [])]);
+      const tenantMap = new Map();
+      (currentState.tenants || []).forEach(t => { if (t && t.id) tenantMap.set(t.id, t); });
+      (incomingState.tenants || []).forEach(t => {
+        if (t && t.id) {
+          const prev = tenantMap.get(t.id);
+          if (!prev) {
+            tenantMap.set(t.id, t);
+          } else {
+            const pTime = new Date(prev.updatedAt || prev.createdAt || 0).getTime();
+            const nTime = new Date(t.updatedAt || t.createdAt || 0).getTime();
+            tenantMap.set(t.id, nTime >= pTime ? { ...prev, ...t } : { ...t, ...prev });
+          }
+        }
+      });
+      const mergedTenants = Array.from(tenantMap.values()).filter(t => !deletedSet.has(t.id));
+
+      const payMap = new Map();
+      (currentState.paymentRequests || []).forEach(p => { if (p && p.id) payMap.set(p.id, p); });
+      (incomingState.paymentRequests || []).forEach(p => {
+        if (p && p.id) {
+          const prev = payMap.get(p.id);
+          payMap.set(p.id, prev ? { ...prev, ...p } : p);
+        }
+      });
+      const mergedPayments = Array.from(payMap.values());
+
+      const mergedBilling = sanitizeBillingContact({
+        ...(currentState.masterBilling || {}),
+        ...(incomingState.masterBilling || {})
+      });
+      const mergedSuperUser = {
+        ...(currentState.superUserAccount || {}),
+        ...(incomingState.superUserAccount || {}),
+        name: "Fernando (Super Admin Master)",
+        email: "toybeatfer@gmail.com",
+      };
+
+      const allClinicIds = new Set([
+        ...Object.keys(currentState.clinicsData || {}),
+        ...Object.keys(incomingState.clinicsData || {})
+      ]);
+      const mergedClinicsData = {};
+      for (const cId of allClinicIds) {
+        if (deletedSet.has(cId)) continue;
+        const curC = currentState.clinicsData?.[cId] || {};
+        const incC = incomingState.clinicsData?.[cId] || {};
+        const cFile = path.join(CLINICS_DIR, `${cId}.json`);
+        
+        const mergeArr = (arr1, arr2) => {
+          const map = new Map();
+          (arr1 || []).forEach(item => { if (item && item.id) map.set(item.id, item); });
+          (arr2 || []).forEach(item => {
+            if (item && item.id) {
+              const prev = map.get(item.id);
+              if (!prev) map.set(item.id, item);
+              else {
+                const t1 = new Date(prev.updatedAt || prev.createdAt || 0).getTime();
+                const t2 = new Date(item.updatedAt || item.createdAt || 0).getTime();
+                map.set(item.id, t2 >= t1 ? { ...prev, ...item } : { ...item, ...prev });
+              }
+            }
+          });
+          return Array.from(map.values());
+        };
+
+        const mergedClinic = {
+          pets: mergeArr(curC.pets, incC.pets),
+          medicalRecords: mergeArr(curC.medicalRecords, incC.medicalRecords),
+          vaccines: mergeArr(curC.vaccines, incC.vaccines),
+          appointments: mergeArr(curC.appointments, incC.appointments),
+          reminders: mergeArr(curC.reminders, incC.reminders),
+          inventory: mergeArr(curC.inventory, incC.inventory),
+          stockMovements: mergeArr(curC.stockMovements, incC.stockMovements),
+          discharges: mergeArr(curC.discharges, incC.discharges),
+          products: mergeArr(curC.products, incC.products),
+          salesReceipts: mergeArr(curC.salesReceipts, incC.salesReceipts),
+          cashShifts: mergeArr(curC.cashShifts, incC.cashShifts),
+          activeShift: incC.activeShift !== undefined ? incC.activeShift : curC.activeShift,
+          clinicSettings: { ...(curC.clinicSettings || {}), ...(incC.clinicSettings || {}) },
+          systemLicense: { ...(curC.systemLicense || {}), ...(incC.systemLicense || {}) },
+          updatedAt: new Date().toISOString(),
+        };
+
+        mergedClinicsData[cId] = mergedClinic;
+        writeJson(cFile, mergedClinic);
+      }
+
+      const harmonizedState = {
+        tenants: mergedTenants,
+        deletedTenants: Array.from(deletedSet),
+        paymentRequests: mergedPayments,
+        masterBilling: mergedBilling,
+        superUserAccount: mergedSuperUser,
+        clinicsData: mergedClinicsData,
+        lastUpdated: new Date().toISOString(),
+      };
+
+      writeJson(MASTER_CLOUD_STATE_FILE, harmonizedState);
+      writeJson(TENANTS_FILE, mergedTenants);
+      writeJson(DELETED_TENANTS_FILE, Array.from(deletedSet));
+      writeJson(PAYMENTS_FILE, mergedPayments);
+      writeJson(MASTER_BILLING_FILE, mergedBilling);
+      writeJson(SUPERUSER_FILE, mergedSuperUser);
+
+      return res.json({
+        success: true,
+        state: harmonizedState,
+        timestamp: harmonizedState.lastUpdated
+      });
+    } catch (e) {
+      console.error("Error in /api/sync:", e);
+      return res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
   // 1. Multi-Tenant List & Auto-Poll API
   app.get("/api/tenants", (_req, res) => {
     const rawTenants = readJson(TENANTS_FILE, []);
@@ -420,7 +616,7 @@ async function startServer() {
 
   // 6. Master Billing & Contact Information API
   app.get("/api/master-billing", (_req, res) => {
-    const billing = readJson(MASTER_BILLING_FILE, null);
+    const billing = sanitizeBillingContact(readJson(MASTER_BILLING_FILE, null));
     res.json({ success: true, settings: billing });
   });
 
@@ -428,7 +624,7 @@ async function startServer() {
     const { settings } = req.body;
     if (settings && typeof settings === 'object') {
       const existing = readJson(MASTER_BILLING_FILE, {});
-      const merged = { ...(existing || {}), ...settings, updatedAt: new Date().toISOString() };
+      const merged = sanitizeBillingContact({ ...(existing || {}), ...settings, updatedAt: new Date().toISOString() });
       writeJson(MASTER_BILLING_FILE, merged);
       return res.json({ success: true, settings: merged, timestamp: new Date().toISOString() });
     }
