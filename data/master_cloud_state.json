@@ -1,6 +1,15 @@
 {
   "tenants": [],
-  "deletedTenants": [],
+  "deletedTenants": [
+    "tenant-gdl-sanfrancisco",
+    "tenant-qro-animalia",
+    "tenant-cdmx-fauna",
+    "tenant-central-local",
+    "tenant-americas",
+    "tenant-1",
+    "tenant-2",
+    "tenant-sample-1"
+  ],
   "paymentRequests": [],
   "masterBilling": {
     "bankName": "BBVA México",
@@ -16,12 +25,37 @@
     "updatedAt": "2026-09-05T00:07:26.959Z"
   },
   "superUserAccount": {
+    "id": "user-super-creator-master",
     "username": "Fernando01",
+    "passwordHash": "Bazzoka1313AS.",
     "name": "Fernando (Super Admin Master)",
-    "phone": "+52 474 1539891",
+    "role": "superuser",
+    "roleTitle": "Creador & Administrador Global del Software",
     "email": "toybeatfer@gmail.com",
-    "isSuperUser": true
+    "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+    "canAccessSettings": true,
+    "isPermanent": true,
+    "isSuperUser": true,
+    "phone": "+52 474 1539891"
   },
-  "clinicsData": {},
-  "lastUpdated": "2026-09-05T00:07:26.962Z"
+  "clinicsData": {
+    "default": {
+      "pets": [],
+      "medicalRecords": [],
+      "vaccines": [],
+      "appointments": [],
+      "reminders": [],
+      "inventory": [],
+      "stockMovements": [],
+      "discharges": [],
+      "products": [],
+      "salesReceipts": [],
+      "cashShifts": [],
+      "activeShift": null,
+      "clinicSettings": {},
+      "systemLicense": {},
+      "updatedAt": "2026-09-05T00:18:45.545Z"
+    }
+  },
+  "lastUpdated": "2026-09-05T00:18:45.545Z"
 }
