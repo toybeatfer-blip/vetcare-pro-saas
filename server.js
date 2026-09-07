@@ -56,7 +56,7 @@ async function startServer() {
   // Prevent stale cache on all devices (PC, Tablets, Mobile)
   app.use((req, res, next) => {
     if (req.path.startsWith('/api') || req.path === '/' || req.path.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
     }
@@ -546,6 +546,9 @@ Genera mensajes empáticos, claros y profesionales para WhatsApp, SMS o correo e
     }
     app.use(express.static(distDir));
     app.get("*", (_req, res) => {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       res.sendFile(path.join(distDir, "index.html"));
     });
   } else {
@@ -569,6 +572,9 @@ Genera mensajes empáticos, claros y profesionales para WhatsApp, SMS o correo e
         if (fs.existsSync(htmlFile)) {
           let template = fs.readFileSync(htmlFile, "utf-8");
           template = await vite.transformIndexHtml(url, template);
+          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0');
+          res.setHeader('Pragma', 'no-cache');
+          res.setHeader('Expires', '0');
           res.status(200).set({ "Content-Type": "text/html" }).end(template);
         } else {
           res.status(404).send("index.html not found");

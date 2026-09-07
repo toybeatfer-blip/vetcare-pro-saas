@@ -12,7 +12,44 @@
     <meta name="description" content="VetCare Pro: Sistema integral para gestión clínica veterinaria y App Android para tutores con carnet digital de vacunación, citas y recordatorios." />
     <meta property="og:title" content="VetCare Pro - Software Veterinario" />
     <meta property="og:description" content="Control clínico veterinario y app móvil para tutores de mascotas." />
-    <script type="module" crossorigin src="/assets/index-1MjM95Vl.js"></script>
+    <!-- Reglas estrictas anti-caché para navegadores móviles y de escritorio -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <script>
+      (function() {
+        var APP_BUILD = "v2026.09.07.1";
+        try {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+              for (var i = 0; i < registrations.length; i++) {
+                registrations[i].unregister();
+              }
+            }).catch(function() {});
+          }
+          var lastBuild = localStorage.getItem('__app_build_version__');
+          if (lastBuild !== APP_BUILD) {
+            if ('caches' in window) {
+              caches.keys().then(function(keys) {
+                keys.forEach(function(key) { caches.delete(key); });
+              }).catch(function() {});
+            }
+            try {
+              var toRemove = [];
+              for (var j = 0; j < localStorage.length; j++) {
+                var k = localStorage.key(j);
+                if (k && (k.startsWith('__temp_') || k.startsWith('vite_') || k.indexOf('stale_') !== -1)) {
+                  toRemove.push(k);
+                }
+              }
+              toRemove.forEach(function(k) { localStorage.removeItem(k); });
+            } catch (e) {}
+            localStorage.setItem('__app_build_version__', APP_BUILD);
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-Dr88lE09.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-n6Vwk2LM.css">
   </head>
   <body class="bg-slate-100 text-slate-900 antialiased selection:bg-indigo-500 selection:text-white">
