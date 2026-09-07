@@ -312,96 +312,120 @@ const LOCAL_STORAGE_KEYS = {
   TUTORIAL_COMPLETED: 'vetcare_tutorial_completed_v1',
 };
 
-// Safe storage purifier of demo items on bootstrap
+// =========================================================================
+// 🧹 RUTINA DE AUTO-PURGA, INVALIDACIÓN DE CACHÉ Y LIMPIEZA INICIAL
+// =========================================================================
+const APP_DATA_VERSION = 'vetcare_v3_cloud_sync_2026';
+
 (() => {
   try {
-    const DEMO_TENANT_IDS = ['tenant-central-local', 'tenant-americas', 'tenant-1', 'tenant-2', 'tenant-sample-1'];
-    const DEMO_PET_IDS = ['pet-1', 'pet-2', 'pet-3', 'pet-4', 'pet-5'];
-    const DEMO_PET_NAMES = ['Max', 'Luna', 'Rocky', 'Milo'];
-    const DEMO_REC_IDS = ['rec-1', 'rec-2', 'rec-3'];
-    const DEMO_VAC_IDS = ['vac-1', 'vac-2'];
-    const DEMO_APT_IDS = ['apt-1', 'apt-2'];
-    const DEMO_MED_IDS = ['med-1', 'med-2', 'med-3'];
-    const DEMO_MOV_IDS = ['mov-1', 'mov-2'];
+    const currentVersion = localStorage.getItem('vetcare_app_version');
 
-    const rawTenants = localStorage.getItem(LOCAL_STORAGE_KEYS.TENANTS);
-    if (rawTenants) {
-      try {
-        const parsed = JSON.parse(rawTenants);
-        if (Array.isArray(parsed)) {
-          const clean = parsed.filter(t => t && t.id && !DEMO_TENANT_IDS.includes(t.id) && t.clinicName !== 'Clínica Veterinaria Central');
-          localStorage.setItem(LOCAL_STORAGE_KEYS.TENANTS, JSON.stringify(clean));
-        }
-      } catch {}
-    }
+    if (currentVersion !== APP_DATA_VERSION) {
+      const OBSOLETE_KEYS = [
+        'vet_pets', 'vet_records', 'vet_vaccines', 'vet_appointments', 
+        'vet_inventory', 'vet_movements', 'vet_petshop_products', 
+        'vet_petshop_sales', 'vet_cash_shifts_v1', 'vet_active_cash_shift_v1'
+      ];
 
-    const rawPets = localStorage.getItem(LOCAL_STORAGE_KEYS.PETS);
-    if (rawPets) {
-      try {
-        const parsed = JSON.parse(rawPets);
-        if (Array.isArray(parsed)) {
-          const clean = parsed.filter(p => p && p.id && !DEMO_PET_IDS.includes(p.id) && !DEMO_PET_NAMES.includes(p.name));
-          localStorage.setItem(LOCAL_STORAGE_KEYS.PETS, JSON.stringify(clean));
-        }
-      } catch {}
-    }
+      OBSOLETE_KEYS.forEach(key => {
+        try { localStorage.removeItem(key); } catch {}
+      });
 
-    const rawRecords = localStorage.getItem(LOCAL_STORAGE_KEYS.RECORDS);
-    if (rawRecords) {
-      try {
-        const parsed = JSON.parse(rawRecords);
-        if (Array.isArray(parsed)) {
-          const clean = parsed.filter(r => r && r.id && !DEMO_REC_IDS.includes(r.id));
-          localStorage.setItem(LOCAL_STORAGE_KEYS.RECORDS, JSON.stringify(clean));
-        }
-      } catch {}
-    }
+      const DEMO_IDS = new Set([
+        'tenant-central-local', 'tenant-americas', 'tenant-1', 'tenant-2', 'tenant-sample-1',
+        'pet-1', 'pet-2', 'pet-3', 'pet-4', 'pet-5',
+        'rec-1', 'rec-2', 'rec-3',
+        'vac-1', 'vac-2',
+        'apt-1', 'apt-2',
+        'med-1', 'med-2', 'med-3',
+        'mov-1', 'mov-2',
+        'req-sample-1'
+      ]);
 
-    const rawVaccines = localStorage.getItem(LOCAL_STORAGE_KEYS.VACCINES);
-    if (rawVaccines) {
-      try {
-        const parsed = JSON.parse(rawVaccines);
-        if (Array.isArray(parsed)) {
-          const clean = parsed.filter(v => v && v.id && !DEMO_VAC_IDS.includes(v.id));
-          localStorage.setItem(LOCAL_STORAGE_KEYS.VACCINES, JSON.stringify(clean));
-        }
-      } catch {}
-    }
+      const DEMO_NAMES = new Set(['Max', 'Luna', 'Rocky', 'Milo']);
 
-    const rawApts = localStorage.getItem(LOCAL_STORAGE_KEYS.APPOINTMENTS);
-    if (rawApts) {
-      try {
-        const parsed = JSON.parse(rawApts);
-        if (Array.isArray(parsed)) {
-          const clean = parsed.filter(a => a && a.id && !DEMO_APT_IDS.includes(a.id));
-          localStorage.setItem(LOCAL_STORAGE_KEYS.APPOINTMENTS, JSON.stringify(clean));
-        }
-      } catch {}
-    }
+      const rawTenants = localStorage.getItem(LOCAL_STORAGE_KEYS.TENANTS);
+      if (rawTenants) {
+        try {
+          const parsed = JSON.parse(rawTenants);
+          if (Array.isArray(parsed)) {
+            const clean = parsed.filter(t => t && t.id && !DEMO_IDS.has(t.id) && t.clinicName !== 'Clínica Veterinaria Central');
+            localStorage.setItem(LOCAL_STORAGE_KEYS.TENANTS, JSON.stringify(clean));
+          }
+        } catch {}
+      }
 
-    const rawInv = localStorage.getItem(LOCAL_STORAGE_KEYS.INVENTORY);
-    if (rawInv) {
-      try {
-        const parsed = JSON.parse(rawInv);
-        if (Array.isArray(parsed)) {
-          const clean = parsed.filter(m => m && m.id && !DEMO_MED_IDS.includes(m.id));
-          localStorage.setItem(LOCAL_STORAGE_KEYS.INVENTORY, JSON.stringify(clean));
-        }
-      } catch {}
-    }
+      const rawPets = localStorage.getItem(LOCAL_STORAGE_KEYS.PETS);
+      if (rawPets) {
+        try {
+          const parsed = JSON.parse(rawPets);
+          if (Array.isArray(parsed)) {
+            const clean = parsed.filter(p => p && p.id && !DEMO_IDS.has(p.id) && !DEMO_NAMES.has(p.name));
+            localStorage.setItem(LOCAL_STORAGE_KEYS.PETS, JSON.stringify(clean));
+          }
+        } catch {}
+      }
 
-    const rawMov = localStorage.getItem(LOCAL_STORAGE_KEYS.MOVEMENTS);
-    if (rawMov) {
-      try {
-        const parsed = JSON.parse(rawMov);
-        if (Array.isArray(parsed)) {
-          const clean = parsed.filter(m => m && m.id && !DEMO_MOV_IDS.includes(m.id));
-          localStorage.setItem(LOCAL_STORAGE_KEYS.MOVEMENTS, JSON.stringify(clean));
-        }
-      } catch {}
+      const rawRecords = localStorage.getItem(LOCAL_STORAGE_KEYS.RECORDS);
+      if (rawRecords) {
+        try {
+          const parsed = JSON.parse(rawRecords);
+          if (Array.isArray(parsed)) {
+            const clean = parsed.filter(r => r && r.id && !DEMO_IDS.has(r.id));
+            localStorage.setItem(LOCAL_STORAGE_KEYS.RECORDS, JSON.stringify(clean));
+          }
+        } catch {}
+      }
+
+      const rawVaccines = localStorage.getItem(LOCAL_STORAGE_KEYS.VACCINES);
+      if (rawVaccines) {
+        try {
+          const parsed = JSON.parse(rawVaccines);
+          if (Array.isArray(parsed)) {
+            const clean = parsed.filter(v => v && v.id && !DEMO_IDS.has(v.id));
+            localStorage.setItem(LOCAL_STORAGE_KEYS.VACCINES, JSON.stringify(clean));
+          }
+        } catch {}
+      }
+
+      const rawApts = localStorage.getItem(LOCAL_STORAGE_KEYS.APPOINTMENTS);
+      if (rawApts) {
+        try {
+          const parsed = JSON.parse(rawApts);
+          if (Array.isArray(parsed)) {
+            const clean = parsed.filter(a => a && a.id && !DEMO_IDS.has(a.id));
+            localStorage.setItem(LOCAL_STORAGE_KEYS.APPOINTMENTS, JSON.stringify(clean));
+          }
+        } catch {}
+      }
+
+      const rawInv = localStorage.getItem(LOCAL_STORAGE_KEYS.INVENTORY);
+      if (rawInv) {
+        try {
+          const parsed = JSON.parse(rawInv);
+          if (Array.isArray(parsed)) {
+            const clean = parsed.filter(m => m && m.id && !DEMO_IDS.has(m.id));
+            localStorage.setItem(LOCAL_STORAGE_KEYS.INVENTORY, JSON.stringify(clean));
+          }
+        } catch {}
+      }
+
+      const rawMov = localStorage.getItem(LOCAL_STORAGE_KEYS.MOVEMENTS);
+      if (rawMov) {
+        try {
+          const parsed = JSON.parse(rawMov);
+          if (Array.isArray(parsed)) {
+            const clean = parsed.filter(m => m && m.id && !DEMO_IDS.has(m.id));
+            localStorage.setItem(LOCAL_STORAGE_KEYS.MOVEMENTS, JSON.stringify(clean));
+          }
+        } catch {}
+      }
+
+      localStorage.setItem('vetcare_app_version', APP_DATA_VERSION);
     }
   } catch (e) {
-    console.error('Storage cleaner error:', e);
+    console.warn('Storage purifier notice:', e);
   }
 })();
 

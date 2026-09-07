@@ -53,6 +53,16 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Prevent stale cache on all devices (PC, Tablets, Mobile)
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api') || req.path === '/' || req.path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+    next();
+  });
+
   // Multi-tenant database storage directory
   const DATA_DIR = path.resolve(process.cwd(), "data");
   const CLINICS_DIR = path.join(DATA_DIR, "clinics");
