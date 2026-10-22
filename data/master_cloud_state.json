@@ -1,6 +1,15 @@
 {
   "tenants": [],
-  "deletedTenants": [],
+  "deletedTenants": [
+    "tenant-gdl-sanfrancisco",
+    "tenant-qro-animalia",
+    "tenant-cdmx-fauna",
+    "tenant-central-local",
+    "tenant-americas",
+    "tenant-1",
+    "tenant-2",
+    "tenant-sample-1"
+  ],
   "paymentRequests": [],
   "masterBilling": {
     "bankName": "BBVA México",
@@ -16,19 +25,43 @@
     "updatedAt": "2026-09-05T00:03:39.838Z"
   },
   "superUserAccount": {
+    "id": "user-super-creator-master",
     "username": "Fernando01",
     "passwordHash": "Bazzoka1313AS.",
     "name": "Fernando (Super Admin Master)",
+    "role": "superuser",
+    "roleTitle": "Creador & Administrador Global del Software",
+    "email": "toybeatfer@gmail.com",
+    "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+    "canAccessSettings": true,
+    "isPermanent": true,
     "isSuperUser": true,
+    "phone": "+52 474 1539891",
     "masterBillingCard": {
       "bankName": "BBVA México",
       "beneficiaryName": "VetCare Pro SaaS",
       "accountOrCardNumber": "4152 3138 9012 3456",
       "clabe": "012180001234567890"
-    },
-    "email": "toybeatfer@gmail.com",
-    "phone": "+52 474 1539891"
+    }
   },
-  "clinicsData": {},
-  "lastUpdated": "2026-09-05T00:03:39.841Z"
+  "clinicsData": {
+    "default": {
+      "pets": [],
+      "medicalRecords": [],
+      "vaccines": [],
+      "appointments": [],
+      "reminders": [],
+      "inventory": [],
+      "stockMovements": [],
+      "discharges": [],
+      "products": [],
+      "salesReceipts": [],
+      "cashShifts": [],
+      "activeShift": null,
+      "clinicSettings": {},
+      "systemLicense": {},
+      "updatedAt": "2026-10-22T01:18:42.863Z"
+    }
+  },
+  "lastUpdated": "2026-10-22T01:18:42.863Z"
 }
